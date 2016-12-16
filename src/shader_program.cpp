@@ -3,7 +3,7 @@
 //
 
 #include "shader_program.h"
-
+#include "log_manager.h"
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -36,7 +36,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
         fragmentCode = fShaderStream.str();
     }
     catch (ifstream::failure e) {
-        cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << endl;
+        LOG.error("SHADER::FILE_NOT_SUCCESFULLY_READ");
     }
 
     const GLchar *vShaderCode = vertexCode.c_str();
@@ -53,7 +53,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::VERTTEX::COMPILATION_FAILED\n" << infoLog << endl;
+        LOG.error("SHADER::VERTTEX::COMPILATION_FAILED(%s)", infoLog);
     }
 
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
@@ -63,8 +63,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED" << endl;
-        cout << "ERROR::SHADER::FRAGMENT::STATUS\n" << infoLog << endl;
+        LOG.error("SHADER::FRAGEMENT::COMPILATION_FAILED(%s)", infoLog);
     }
 
     this->program = glCreateProgram();
@@ -75,13 +74,113 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetProgramiv(this->program, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(this->program, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
+        LOG.error("SHADER::PROGRAM::LINKING_FAILED(%s)", infoLog);
     }
+
+    int num_uniforms;
+    glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &num_uniforms);
+
+    for (int i = 0; i < num_uniforms; i++) {
+        char name[256] = "";
+        int name_length;
+        GLint size;
+        GLenum type;
+        glGetActiveUniform(program, i, sizeof(name), &name_length, &size, &type, name);
+
+        GLint loc = glGetUniformLocation(program, name);
+
+        InternString uni_name(name);
+        uniforms[uni_name] = std::make_pair(loc, type);
+    }
+    unbind();
+
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
 
-void ShaderProgram::use()
+void ShaderProgram::uniform(UniformID id, float v0, float v1, float v2, float v3)
+{
+    Binding b = get_uniform_binding(id);
+    uniform(b, v0, v1, v2, v3);
+}
+
+void ShaderProgram::uniform(UniformID id, int i0)
+{
+    Binding b = get_uniform_binding(id);
+    uniform(b, i0);
+}
+
+void ShaderProgram::uniform(UniformID id, GLsizei count, GLboolean transpose, const GLfloat* mat)
+{
+    Binding b = get_uniform_binding(id);
+    uniform(b, count, transpose, mat);
+}
+
+void ShaderProgram::bind()
 {
     glUseProgram(program);
 }
+
+void ShaderProgram::unbind()
+{
+    glUseProgram(0);
+}
+
+ShaderProgram::Binding ShaderProgram::get_uniform_binding(UniformID id)
+{
+    auto iter = uniforms.find(id);
+    if (iter == uniforms.end()) {
+        return Binding();
+    }
+
+    return Binding((int) iter->second.first, (int) iter->second.second);
+}
+
+void ShaderProgram::uniform(const ShaderProgram::Binding& b, float v0, float v1, float v2, float v3)
+{
+    int id = b.first;
+    if (id != -1) {
+        GLenum type = (GLenum) b.second;
+
+        switch (type) {
+        case GL_FLOAT_VEC2:
+            glUniform2f(id, v0, v1);
+            break;
+        case GL_FLOAT_VEC3:
+            glUniform3f(id, v0, v1, v2);
+            break;
+        case GL_FLOAT_VEC4:
+            glUniform4f(id, v0, v1, v2, v3);
+            break;
+        }
+    }
+}
+
+void ShaderProgram::uniform(const ShaderProgram::Binding& b, int i0)
+{
+    int id = b.first;
+    if (id != -1) {
+        GLenum type = (GLenum) b.second;
+
+        switch (type) {
+        case GL_INT:
+            glUniform1i(id, i0);
+            break;
+        }
+    }
+}
+
+void ShaderProgram::uniform(const Binding& b, GLsizei count, GLboolean transpose, const GLfloat* mat)
+{
+    int id = b.first;
+    if (id != -1) {
+        GLenum type = (GLenum) b.second;
+
+        switch (type) {
+        case GL_FLOAT_MAT4:
+            glUniformMatrix4fv(id, count, transpose, mat);
+            break;
+        }
+    }
+}
+

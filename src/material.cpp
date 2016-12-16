@@ -1,9 +1,8 @@
 #include "material.h"
-
+#include "log_manager.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb.h>
 #include <stb_image.h>
-#include <iostream>
 #include <map>
 
 using namespace std;
@@ -20,7 +19,8 @@ MaterialTexture::MaterialTexture(const std::string& path)
 
 void MaterialTexture::load_texture()
 {
-    cout << "Loading texture " << path << endl;
+    LOG.debug("Loading texture %s", path.c_str());
+
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object

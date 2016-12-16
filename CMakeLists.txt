@@ -46,10 +46,14 @@ SET(EXT_SRCLIST
         ${TOPDIR}/ext/glad/src/glad.c)
 
 SET(WEEABOO_SRCLIST
+        src/log.cpp
+        src/log_manager.cpp
         src/main.cpp
         src/material.cpp
         src/mesh.cpp
-        src/shader_program.cpp)
+        src/shader_program.cpp
+        src/renderer.cpp
+        src/intern_string.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} pthread)

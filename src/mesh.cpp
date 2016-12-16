@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "log_manager.h"
 #include <iostream>
 
 using namespace std;
@@ -64,8 +65,9 @@ void Model::load_model(std::string path){
     Assimp::Importer import;
     const aiScene* scene = import.ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs);
 
+    LOG.debug("Loading model %s", path.c_str());
     if(!scene){
-        cout << "ERROR::ASSIMP::" << import.GetErrorString() << endl;
+        LOG.error("ASSIMP::%s", import.GetErrorString());
         return ;
     }
     this->directory = path.substr(0,path.find_last_of('/'));
