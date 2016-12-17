@@ -19,7 +19,7 @@ MaterialTexture::MaterialTexture(const std::string& path)
 
 void MaterialTexture::load_texture()
 {
-    LOG.debug("Loading texture %s", path.c_str());
+    LOG.debug("Loading texture '%s'", path.c_str());
 
     GLuint texture;
     glGenTextures(1, &texture);

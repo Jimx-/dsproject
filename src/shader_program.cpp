@@ -4,6 +4,8 @@
 
 #include "shader_program.h"
 #include "log_manager.h"
+#include "exception.h"
+
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -36,7 +38,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
         fragmentCode = fShaderStream.str();
     }
     catch (ifstream::failure e) {
-        LOG.error("SHADER::FILE_NOT_SUCCESFULLY_READ");
+        THROW_EXCEPT(E_FILE_NOT_FOUND, "ShaderProgram::ShaderProgram()", "shader file is not successfully read");
     }
 
     const GLchar *vShaderCode = vertexCode.c_str();
@@ -53,7 +55,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-        LOG.error("SHADER::VERTTEX::COMPILATION_FAILED(%s)", infoLog);
+        THROW_EXCEPT(E_RESOURCE_ERROR, "ShaderProgram::ShaderProgram()", "SHADER::VERTTEX::COMPILATION_FAILED(" + string(infoLog) + ")");
     }
 
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
@@ -63,7 +65,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-        LOG.error("SHADER::FRAGEMENT::COMPILATION_FAILED(%s)", infoLog);
+        THROW_EXCEPT(E_RESOURCE_ERROR, "ShaderProgram::ShaderProgram()", "SHADER::FRAGMENT::COMPILATION_FAILED(" + string(infoLog) + ")");
     }
 
     this->program = glCreateProgram();
@@ -74,7 +76,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     glGetProgramiv(this->program, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(this->program, 512, NULL, infoLog);
-        LOG.error("SHADER::PROGRAM::LINKING_FAILED(%s)", infoLog);
+        THROW_EXCEPT(E_RESOURCE_ERROR, "ShaderProgram::ShaderProgram()", "SHADER::PROGRAM::LINKING_FAILED(" + string(infoLog) + ")");
     }
 
     int num_uniforms;
@@ -113,6 +115,7 @@ void ShaderProgram::uniform(UniformID id, int i0)
 void ShaderProgram::uniform(UniformID id, GLsizei count, GLboolean transpose, const GLfloat* mat)
 {
     Binding b = get_uniform_binding(id);
+    //cout << id.c_str() << " " << b.first << " " << b.second << endl;
     uniform(b, count, transpose, mat);
 }
 

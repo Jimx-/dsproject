@@ -6,6 +6,7 @@
 #define WEEABOO_STRINGS_H
 
 const InternString Renderer::LIGHTING_SHADER = "lighting";
+const InternString Renderer::BONE_ANIM_SHADER = "bone_animation";
 
 const InternString ShaderProgram::MVP = "uMVP";
 

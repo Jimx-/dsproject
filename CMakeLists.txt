@@ -17,12 +17,15 @@ OPTION(ASSIMP_BUILD_SAMPLES OFF)
 OPTION(ASSIMP_BUILD_TESTS OFF)
 ADD_SUBDIRECTORY(${TOPDIR}/ext/assimp)
 
+EXECUTE_PROCESS(COMMAND python amalgamate.py WORKING_DIRECTORY ${TOPDIR}/ext/jsoncpp)
+
 INCLUDE_DIRECTORIES(${TOPDIR}/include
         ${TOPDIR}/ext/assimp/include
         ${TOPDIR}/ext/glad/include
         ${TOPDIR}/ext/glfw/include
         ${TOPDIR}/ext/glm
-        ${TOPDIR}/ext/stb)
+        ${TOPDIR}/ext/stb
+        ${TOPDIR}/ext/jsoncpp/dist)
 
 IF(${UNIX})
     ADD_DEFINITIONS(-D_UNIX_)
@@ -43,7 +46,8 @@ IF(${CYGWIN})
 ENDIF(${CYGWIN})
 
 SET(EXT_SRCLIST
-        ${TOPDIR}/ext/glad/src/glad.c)
+        ${TOPDIR}/ext/glad/src/glad.c
+        ${TOPDIR}/ext/jsoncpp/dist/jsoncpp.cpp)
 
 SET(WEEABOO_SRCLIST
         src/log.cpp
@@ -53,7 +57,10 @@ SET(WEEABOO_SRCLIST
         src/mesh.cpp
         src/shader_program.cpp
         src/renderer.cpp
-        src/intern_string.cpp)
+        src/intern_string.cpp
+        src/config.cpp
+        src/string_utils.cpp
+        src/exception.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} pthread)

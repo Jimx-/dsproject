@@ -17,7 +17,12 @@ class Renderer : public Singleton<Renderer> {
 public:
     Renderer();
 
+    void set_viewport(int width, int height);
+
     static const InternString LIGHTING_SHADER;
+    static const InternString BONE_ANIM_SHADER;
+
+    static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
 
     void use_shader(InternString name);
     void uniform(ShaderProgram::UniformID id, float v0, float v1, float v2 = 0.0f, float v3 = 0.0f);
@@ -27,6 +32,12 @@ public:
 private:
     std::map<InternString, PShaderProgram> shaders;
     PShaderProgram current_shader;
+
+    glm::mat4 projection;
+
+    static const float Z_NEAR;
+    static const float Z_FAR;
+    static const float FOV;
 };
 
 #define RENDERER Renderer::get_singleton()
