@@ -24,5 +24,6 @@ private:
 
 extern int g_screen_width;
 extern int g_screen_height;
+extern bool g_fullscreen;
 
 #endif //WEEABOO_CONFIG_H

@@ -9,6 +9,7 @@
 
 int g_screen_width;
 int g_screen_height;
+bool g_fullscreen;
 
 ConfigFile::ConfigFile() : root(nullptr)
 {

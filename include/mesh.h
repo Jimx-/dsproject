@@ -30,7 +30,7 @@ struct Vertex{
         }
     }
 
-    void add_bone_data(uint bone_id, float weight) {
+    void add_bone_data(unsigned int bone_id, float weight) {
         for (int i = 0; i < NUM_BONES_PER_VERTEX; i++) {
             if (bone_weights[i] == 0.0f) {
                 bone_ids[i] = bone_id;
@@ -74,7 +74,7 @@ private:
     void interpolate_translation(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim);
     void interpolate_scaling(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim);
     void interpolate_rotation(aiQuaternion& out, float animation_time, const aiNodeAnim* node_anim);
-    uint find_rotation(float animation_time, const aiNodeAnim* node_anim);
+	unsigned int find_rotation(float animation_time, const aiNodeAnim* node_anim);
 };
 
 class Model : public Renderable

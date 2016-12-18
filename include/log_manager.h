@@ -43,7 +43,11 @@ public:
     template <typename ... Args>
     void error(const char* format, Args ... args)
     {
-        log_format(LogMessageLevel::ERROR, format, args ...);
+#ifdef _WIN32_
+        log_format(LogMessageLevel::ERROR_, format, args ...);
+#else
+		log_format(LogMessageLevel::ERROR, format, args ...);
+#endif
     }
 
 private:

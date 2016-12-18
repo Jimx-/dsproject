@@ -134,7 +134,7 @@ void Mesh::read_node_hierarchy(aiAnimation* animation, float animation_time, con
         bone.final_transform = global_transform_inverse * global_transform * bone.offset_matrix;
     }
 
-    for (uint i = 0 ; i < node->mNumChildren ; i++) {
+    for (unsigned int i = 0 ; i < node->mNumChildren ; i++) {
         read_node_hierarchy(animation, animation_time, node->mChildren[i], global_transform);
     }
 }
@@ -146,8 +146,8 @@ void Mesh::interpolate_rotation(aiQuaternion& out, float animation_time, const a
         return;
     }
 
-    uint rotation_index = find_rotation(animation_time, node_anim);
-    uint next_rotation_index = (rotation_index + 1);
+	unsigned int rotation_index = find_rotation(animation_time, node_anim);
+	unsigned int next_rotation_index = (rotation_index + 1);
     float DeltaTime = node_anim->mRotationKeys[next_rotation_index].mTime - node_anim->mRotationKeys[rotation_index].mTime;
     float Factor = (animation_time - (float)node_anim->mRotationKeys[rotation_index].mTime) / DeltaTime;
     assert(Factor >= 0.0f && Factor <= 1.0f);
@@ -164,14 +164,14 @@ void Mesh::interpolate_translation(aiVector3D& out, float animation_time, const 
         return;
     }
 
-    uint position_index;
+	unsigned int position_index;
     for (position_index = 0 ; position_index < node_anim->mNumPositionKeys - 1 ; position_index++) {
         if (animation_time < (float)node_anim->mPositionKeys[position_index + 1].mTime) {
             break;
         }
     }
 
-    uint next_position_index = (position_index + 1);
+	unsigned int next_position_index = (position_index + 1);
     float DeltaTime = node_anim->mPositionKeys[next_position_index].mTime - node_anim->mPositionKeys[position_index].mTime;
     float Factor = (animation_time - (float)node_anim->mPositionKeys[position_index].mTime) / DeltaTime;
     assert(Factor >= 0.0f && Factor <= 1.0f);
@@ -187,14 +187,14 @@ void Mesh::interpolate_scaling(aiVector3D& out, float animation_time, const aiNo
         return;
     }
 
-    uint scaling_index;
+	unsigned int scaling_index;
     for (scaling_index = 0 ; scaling_index < node_anim->mNumScalingKeys - 1 ; scaling_index++) {
         if (animation_time < (float)node_anim->mScalingKeys[scaling_index + 1].mTime) {
             break;
         }
     }
 
-    uint next_scaling_index = (scaling_index + 1);
+	unsigned int next_scaling_index = (scaling_index + 1);
     float DeltaTime = node_anim->mScalingKeys[next_scaling_index].mTime - node_anim->mScalingKeys[scaling_index].mTime;
     float Factor = (animation_time - (float)node_anim->mScalingKeys[scaling_index].mTime) / DeltaTime;
     assert(Factor >= 0.0f && Factor <= 1.0f);
@@ -203,10 +203,10 @@ void Mesh::interpolate_scaling(aiVector3D& out, float animation_time, const aiNo
     out = EndScalingV * Factor + StartScalingV * (1 - Factor);
 }
 
-uint Mesh::find_rotation(float animation_time, const aiNodeAnim* node_anim)
+unsigned int Mesh::find_rotation(float animation_time, const aiNodeAnim* node_anim)
 {
 
-    for (uint i = 0 ; i < node_anim->mNumRotationKeys - 1 ; i++) {
+    for (unsigned int i = 0 ; i < node_anim->mNumRotationKeys - 1 ; i++) {
         if (animation_time < (float)node_anim->mRotationKeys[i + 1].mTime) {
             return i;
         }
@@ -305,7 +305,7 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
     Mesh::BoneMapping bones;
     int num_bones = 0;
 
-    for (uint i = 0; i < mesh->mNumBones; i++) {
+    for (unsigned int i = 0; i < mesh->mNumBones; i++) {
         string bone_name(mesh->mBones[i]->mName.data);
 
         int bone_idx;
@@ -322,8 +322,8 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
         bones[bone_name].id = bone_idx;
         copy_matrix(mesh->mBones[i]->mOffsetMatrix, bones[bone_name].offset_matrix);
 
-        for (uint j = 0 ; j < mesh->mBones[i]->mNumWeights ; j++) {
-            uint vid = mesh->mBones[i]->mWeights[j].mVertexId;
+        for (unsigned int j = 0 ; j < mesh->mBones[i]->mNumWeights ; j++) {
+			unsigned int vid = mesh->mBones[i]->mWeights[j].mVertexId;
             float weight = mesh->mBones[i]->mWeights[j].mWeight;
             vertices[vid].add_bone_data(bone_idx, weight);
         }

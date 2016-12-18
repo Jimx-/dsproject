@@ -30,7 +30,7 @@ INCLUDE_DIRECTORIES(${TOPDIR}/include
 IF(${UNIX})
     ADD_DEFINITIONS(-D_UNIX_)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    SET(GLAD_LIBRARIES dl)
+    SET(GLAD_LIBRARIES dl pthread)
 ENDIF(${UNIX})
 
 IF(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -64,7 +64,7 @@ SET(WEEABOO_SRCLIST
         src/animation.cpp src/animation_manager.cpp)
 
 SET(LIBRARIES
-    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} pthread)
+    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
 
 ADD_EXECUTABLE(weeaboo ${WEEABOO_SRCLIST} ${EXT_SRCLIST})
 TARGET_LINK_LIBRARIES(weeaboo ${LIBRARIES})

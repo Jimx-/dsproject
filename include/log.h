@@ -16,7 +16,11 @@ enum class LogMessageLevel {
     DEBUG,
     INFO,
     WARN,
-    ERROR,
+#ifdef _WIN32_
+    ERROR_,
+#else
+	ERROR,
+#endif
     ALL,
 };
 
@@ -40,7 +44,11 @@ public:
             DEF_LOG_TYPE(DEBUG)
             DEF_LOG_TYPE(INFO)
             DEF_LOG_TYPE(WARN)
-            DEF_LOG_TYPE(ERROR)
+#ifdef _WIN32_
+            DEF_LOG_TYPE(ERROR_)
+#else
+			DEF_LOG_TYPE(ERROR)
+#endif
         }
 
         if (lvl >= level) {

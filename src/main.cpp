@@ -35,6 +35,10 @@ void load_config()
         string height = video_mode.substr(cross_pos + 1, video_mode.length() - cross_pos - 1);
         g_screen_width = StringUtils::parse_int(width, 800);
         g_screen_height = StringUtils::parse_int(height, 600);
+
+		/* fullscreen */
+		string fullscreen = graphics_config.get("fullscreen", "false").asString();
+		g_fullscreen = (fullscreen == "true");
     }
 }
 
@@ -56,7 +60,11 @@ void setup_context()
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create a GLFWwindow object that we can use for GLFW's functions
-    window = glfwCreateWindow(g_screen_width, g_screen_height, "Weeaboo", nullptr, nullptr);
+	GLFWmonitor* monitor = nullptr;
+	if (g_fullscreen) {
+		monitor = glfwGetPrimaryMonitor();
+	}
+    window = glfwCreateWindow(g_screen_width, g_screen_height, "Weeaboo", monitor, nullptr);
     glfwMakeContextCurrent(window);
 
     // Load OpenGL library
@@ -84,17 +92,23 @@ int main()
     vector<AnimationModel*> models;
     for (int i = 0; i < N; i++) {
         models.push_back(new AnimationModel(ourModel));
-        models[i]->start_animation("onehand_walk");
+        models[i]->start_animation("onehand_attack");
     }
 
     float angle = 0.0f;
     double last_time = glfwGetTime();
     double current_time;
 
-    RENDERER.add_light(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), 0.5f, 1.0f);
+    /*RENDERER.add_light(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), 0.5f, 1.0f);
     RENDERER.add_light(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
     RENDERER.add_light(glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
+	RENDERER.add_light(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 1.0f));
+	RENDERER.add_light(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.5f));*/
+	for (int i = 0; i < 32; i++) {
+		RENDERER.add_light(glm::vec3((float)4 * ((i / 3) - 1.5f), 0.0f, (float)-4 * (i % 3) + 0.3f), glm::vec3(1.0f, 0.8f, 0.5f), 0.5f, 1.0f);
+	}
     // Game loop
+	int step = 0;
     while (!glfwWindowShouldClose(window))
     {
         // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
@@ -110,9 +124,8 @@ int main()
             sprintf(title, "Weeaboo [fps: %d]", (int) (1 / dt));
             glfwSetWindowTitle(window, title);
         }
-
+		//angle += 0.1f;
         RENDERER.begin_frame();
-
         for (int i = 0; i < N; i++) {
             RENDERER.push_matrix();
             RENDERER.translate((float)4 * ((i / 3) - 1.5f), -2.0f, (float) -4 * (i % 3));
