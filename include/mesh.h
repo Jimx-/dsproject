@@ -2,11 +2,13 @@
 #define MESH_H
 
 #include "material.h"
+#include "renderable.h"
 #include "intern_string.h"
 
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 #include <glad/glad.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -38,12 +40,7 @@ struct Vertex{
     }
 };
 
-struct Texture{
-    GLuint id;
-    std::string type;
-};
-
-class Mesh {
+class Mesh : public Renderable {
 public:
 
     struct Bone {
@@ -58,39 +55,38 @@ public:
     std::vector<GLuint> indices;
     BoneMapping bones;
 
-    aiNode* scene_root;
-    aiAnimation* animation;
-    float animation_time_sec;
-
     PMaterial material;
+    aiNode* scene_root;
 
-    Mesh(aiNode* scene_root, const std::vector<Vertex>& vertices, const std::vector<GLuint>& indices, PMaterial material, const BoneMapping& bones);
-    //Mesh(const Mesh& that);
-    //Mesh(Mesh&& that);
+    glm::mat4 global_transform_inverse;
 
-    void start_animation(aiAnimation* animation);
-    void update_animation(float dt);
+    Mesh(aiNode* scene_root, const std::vector<Vertex>& vertices, const std::vector<GLuint>& indices, PMaterial material,
+         const BoneMapping& bones, const glm::mat4& global_transform_inverse);
 
-    void draw();
-
+    void update_bone_transform(aiAnimation* animation, float time_sec, std::vector<glm::mat4>& transforms);
+    void draw(Renderer& renderer);
 
 private:
     GLuint VAO ,VBO, EBO;
     void setup_mesh();
 
-    void update_bone_transform(float time_sec, std::vector<glm::mat4>& transforms);
-    void read_node_hierarchy(float animation_time, const aiNode* node, const glm::mat4& parent_transform);
+    void read_node_hierarchy(aiAnimation* animation, float animation_time, const aiNode* node, const glm::mat4& parent_transform);
+    void interpolate_translation(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim);
+    void interpolate_scaling(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim);
     void interpolate_rotation(aiQuaternion& out, float animation_time, const aiNodeAnim* node_anim);
     uint find_rotation(float animation_time, const aiNodeAnim* node_anim);
 };
 
-class Model
+class Model : public Renderable
 {
 public:
     Model(const char* path);
 
     void load_animation(InternString name, std::string path);
-    void draw();
+    void draw(Renderer& renderer);
+
+    aiAnimation* get_animation(InternString name) const;
+    std::vector<Mesh>& get_meshes() { return meshes; }
 
     void start_animation(InternString name);
     void update_animation(float dt);
@@ -99,7 +95,6 @@ private:
     std::vector<PMaterial> materials;
     std::string directory;
     std::map<InternString, aiAnimation*> animations;
-    aiAnimation* current_animation;
 
     void load_model(std::string path);
 
@@ -107,6 +102,8 @@ private:
     Mesh process_mesh(aiMesh* mesh, const aiScene* scene);
     void process_materials(const aiScene* scene);
 };
+
+using PModel = std::shared_ptr<Model>;
 
 #endif
 

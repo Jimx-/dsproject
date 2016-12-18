@@ -40,7 +40,6 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
     catch (ifstream::failure e) {
         THROW_EXCEPT(E_FILE_NOT_FOUND, "ShaderProgram::ShaderProgram()", "shader file is not successfully read");
     }
-
     const GLchar *vShaderCode = vertexCode.c_str();
     const GLchar *fShaderCode = fragmentCode.c_str();
 
@@ -112,6 +111,12 @@ void ShaderProgram::uniform(UniformID id, int i0)
     uniform(b, i0);
 }
 
+void ShaderProgram::uniform(UniformID id, float f0)
+{
+    Binding b = get_uniform_binding(id);
+    uniform(b, f0);
+}
+
 void ShaderProgram::uniform(UniformID id, GLsizei count, GLboolean transpose, const GLfloat* mat)
 {
     Binding b = get_uniform_binding(id);
@@ -168,6 +173,23 @@ void ShaderProgram::uniform(const ShaderProgram::Binding& b, int i0)
         switch (type) {
         case GL_INT:
             glUniform1i(id, i0);
+            break;
+        case GL_SAMPLER_2D:
+            glUniform1i(id, i0);
+            break;
+        }
+    }
+}
+
+void ShaderProgram::uniform(const ShaderProgram::Binding& b, float f0)
+{
+    int id = b.first;
+    if (id != -1) {
+        GLenum type = (GLenum) b.second;
+
+        switch (type) {
+        case GL_FLOAT:
+            glUniform1f(id, f0);
             break;
         }
     }

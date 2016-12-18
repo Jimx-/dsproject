@@ -24,11 +24,15 @@ private:
 
 class Material {
 public:
-    Material(const std::string& diffuse_texture);
+    Material(float roughness, float metallic, const std::string& diffuse_texture);
 
     PMaterialTexture get_diffuse_texture() const { return diffuse_texture; }
+    float get_metallic() const { return metallic; }
+    float get_roughness() const { return roughness; }
 private:
     PMaterialTexture diffuse_texture;
+    float roughness;
+    float metallic;
 };
 
 using PMaterial = std::shared_ptr<Material>;

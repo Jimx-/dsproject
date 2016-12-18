@@ -20,34 +20,24 @@ void copy_matrix(const RM& from, CM& to)
 	to[2][3] = from.d3; to[3][3] = from.d4;
 }
 
-Mesh::Mesh(aiNode* scene_root, const std::vector<Vertex>& vertices, const std::vector<GLuint>& indices, PMaterial material, const BoneMapping& bones)
+Mesh::Mesh(aiNode* scene_root, const std::vector<Vertex>& vertices, const std::vector<GLuint>& indices, PMaterial material,
+           const BoneMapping& bones, const glm::mat4& global_transform_inverse)
 {
     this->vertices = vertices;
     this->indices = indices;
     this->material = material;
     this->scene_root = scene_root;
     this->bones = bones;
-    animation = nullptr;
-    animation_time_sec = 0.0f;
+    this->global_transform_inverse = global_transform_inverse;
     this->setup_mesh();
 }
 
-void Mesh::draw()
+void Mesh::draw(Renderer& renderer)
 {
     if (material) {
         material->get_diffuse_texture()->bind(Renderer::DIFFUSE_TEXTURE_TARGET);
-    }
-
-    if (animation) {
-        vector<glm::mat4> transforms;
-        update_bone_transform(animation_time_sec, transforms);
-
-        GLfloat* matrices = new GLfloat[4 * 4 * transforms.size()];
-        for (int i = 0; i < transforms.size(); i++) {
-            memcpy(matrices + 16 * i, glm::value_ptr(transforms[i]), 4 * 4 * sizeof(GLfloat));
-        }
-        RENDERER.uniform("uBoneTransforms[0]", transforms.size(), false, matrices);
-        delete[] matrices;
+        renderer.uniform(ShaderProgram::MAT_METALLIC, material->get_metallic());
+        renderer.uniform(ShaderProgram::MAT_ROUGHNESS, material->get_roughness());
     }
 
     glBindVertexArray(this->VAO);
@@ -87,14 +77,14 @@ void Mesh::setup_mesh()
     glBindVertexArray(0);
 }
 
-void Mesh::update_bone_transform(float time_sec, std::vector<glm::mat4>& transforms)
+void Mesh::update_bone_transform(aiAnimation* animation, float time_sec, std::vector<glm::mat4>& transforms)
 {
     float tick_per_sec = animation->mTicksPerSecond != 0 ?
                             animation->mTicksPerSecond : 25.0f;
     float time_tick = time_sec * tick_per_sec;
     float animation_time = fmod(time_tick, animation->mDuration);
 
-    read_node_hierarchy(animation_time, scene_root, glm::mat4());
+    read_node_hierarchy(animation, animation_time, scene_root, glm::mat4());
 
     transforms.resize(bones.size());
 
@@ -104,7 +94,7 @@ void Mesh::update_bone_transform(float time_sec, std::vector<glm::mat4>& transfo
     }
 }
 
-void Mesh::read_node_hierarchy(float animation_time, const aiNode* node, const glm::mat4& parent_transform)
+void Mesh::read_node_hierarchy(aiAnimation* animation, float animation_time, const aiNode* node, const glm::mat4& parent_transform)
 {
     string node_name(node->mName.data);
 
@@ -119,42 +109,33 @@ void Mesh::read_node_hierarchy(float animation_time, const aiNode* node, const g
     }
 
     if (node_anim) {
-        /*
-        aiVector3D Scaling;
-        CalcInterpolatedScaling(Scaling, animation_time, pNodeAnim);
-        Matrix4f ScalingM;
-        ScalingM.InitScaleTransform(Scaling.x, Scaling.y, Scaling.z);
-        */
+        aiVector3D scaling_v;
+        interpolate_scaling(scaling_v, animation_time, node_anim);
+        aiMatrix4x4 scaling_mat;
+        aiMatrix4x4::Scaling(scaling_v, scaling_mat);
+
         aiQuaternion rotation_q;
         interpolate_rotation(rotation_q, animation_time, node_anim);
         aiMatrix4x4 rotation_mat(rotation_q.GetMatrix());
-        /*
-        aiVector3D Translation;
-        CalcInterpolatedPosition(Translation, animation_time, pNodeAnim);
-        Matrix4f TranslationM;
-        TranslationM.InitTranslationTransform(Translation.x, Translation.y, Translation.z);
-       NodeTransformation = TranslationM * RotationM * ScalingM; */
 
-        aiVector3D translation_v = node_anim->mPositionKeys[0].mValue;
+        aiVector3D translation_v;
+        interpolate_translation(translation_v, animation_time, node_anim);
         aiMatrix4x4 translation_mat;
         aiMatrix4x4::Translation(translation_v, translation_mat);
 
-        copy_matrix(translation_mat * rotation_mat, node_transform);
+        copy_matrix(translation_mat * rotation_mat * scaling_mat, node_transform);
     }
 
 
     glm::mat4 global_transform = parent_transform * node_transform;
 
     if (bones.find(node_name) != bones.end()) {
-        /*
-        bones[node_name].final_transform = m_GlobalInverseTransform * global_transform *
-                                                    m_BoneInfo[BoneIndex].BoneOffset; */
         Bone& bone = bones[node_name];
-        bone.final_transform = global_transform * bone.offset_matrix;
+        bone.final_transform = global_transform_inverse * global_transform * bone.offset_matrix;
     }
 
     for (uint i = 0 ; i < node->mNumChildren ; i++) {
-        read_node_hierarchy(animation_time, node->mChildren[i], global_transform);
+        read_node_hierarchy(animation, animation_time, node->mChildren[i], global_transform);
     }
 }
 
@@ -176,6 +157,52 @@ void Mesh::interpolate_rotation(aiQuaternion& out, float animation_time, const a
     out = out.Normalize();
 }
 
+void Mesh::interpolate_translation(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim)
+{
+    if (node_anim->mNumPositionKeys == 1) {
+        out = node_anim->mPositionKeys[0].mValue;
+        return;
+    }
+
+    uint position_index;
+    for (position_index = 0 ; position_index < node_anim->mNumPositionKeys - 1 ; position_index++) {
+        if (animation_time < (float)node_anim->mPositionKeys[position_index + 1].mTime) {
+            break;
+        }
+    }
+
+    uint next_position_index = (position_index + 1);
+    float DeltaTime = node_anim->mPositionKeys[next_position_index].mTime - node_anim->mPositionKeys[position_index].mTime;
+    float Factor = (animation_time - (float)node_anim->mPositionKeys[position_index].mTime) / DeltaTime;
+    assert(Factor >= 0.0f && Factor <= 1.0f);
+    const aiVector3D& StartPositionV = node_anim->mPositionKeys[position_index].mValue;
+    const aiVector3D& EndPositionV = node_anim->mPositionKeys[next_position_index].mValue;
+    out = EndPositionV * Factor + StartPositionV * (1 - Factor);
+}
+
+void Mesh::interpolate_scaling(aiVector3D& out, float animation_time, const aiNodeAnim* node_anim)
+{
+    if (node_anim->mNumScalingKeys == 1) {
+        out = node_anim->mScalingKeys[0].mValue;
+        return;
+    }
+
+    uint scaling_index;
+    for (scaling_index = 0 ; scaling_index < node_anim->mNumScalingKeys - 1 ; scaling_index++) {
+        if (animation_time < (float)node_anim->mScalingKeys[scaling_index + 1].mTime) {
+            break;
+        }
+    }
+
+    uint next_scaling_index = (scaling_index + 1);
+    float DeltaTime = node_anim->mScalingKeys[next_scaling_index].mTime - node_anim->mScalingKeys[scaling_index].mTime;
+    float Factor = (animation_time - (float)node_anim->mScalingKeys[scaling_index].mTime) / DeltaTime;
+    assert(Factor >= 0.0f && Factor <= 1.0f);
+    const aiVector3D& StartScalingV = node_anim->mScalingKeys[scaling_index].mValue;
+    const aiVector3D& EndScalingV = node_anim->mScalingKeys[next_scaling_index].mValue;
+    out = EndScalingV * Factor + StartScalingV * (1 - Factor);
+}
+
 uint Mesh::find_rotation(float animation_time, const aiNodeAnim* node_anim)
 {
 
@@ -186,32 +213,19 @@ uint Mesh::find_rotation(float animation_time, const aiNodeAnim* node_anim)
     }
 }
 
-void Mesh::start_animation(aiAnimation* animation)
-{
-    this->animation = animation;
-    animation_time_sec = 0.0f;
-}
-
-void Mesh::update_animation(float dt)
-{
-    if (animation) {
-        animation_time_sec += dt;
-    }
-}
-
 Model::Model(const char* path)
 {
     this->load_model(path);
 }
 
-void Model::draw()
+void Model::draw(Renderer& renderer)
 {
     for(GLuint i = 0; i < this->meshes.size(); i++){
-        this->meshes[i].draw();
+        this->meshes[i].draw(renderer);
     }
 }
 
-void Model::load_model(std::string path){
+void Model::load_model(std::string path) {
     Assimp::Importer* import = new Assimp::Importer();
     const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs);
 
@@ -220,6 +234,7 @@ void Model::load_model(std::string path){
         THROW_EXCEPT(E_RESOURCE_ERROR, "Model::load_model()", "ASSIMP::" + string(import->GetErrorString()));
     }
     this->directory = path.substr(0,path.find_last_of('/'));
+    process_materials(scene);
     this->process_node(scene->mRootNode, scene);
 }
 
@@ -241,7 +256,6 @@ void Model::load_animation(InternString name, std::string path)
 }
 
 void Model::process_node(aiNode* node, const aiScene* scene){
-    process_materials(scene);
 
     for(GLuint i = 0; i < node->mNumMeshes; i++){
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -257,7 +271,6 @@ void Model::process_node(aiNode* node, const aiScene* scene){
 Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
-    std::vector<Texture> textures;
 
     for(GLuint i = 0; i < mesh->mNumVertices; i++){
         Vertex vertex;
@@ -316,7 +329,9 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
         }
     }
 
-    return Mesh(scene->mRootNode, vertices, indices, material, bones);
+    glm::mat4 global_transform;
+    copy_matrix(scene->mRootNode->mTransformation, global_transform);
+    return Mesh(scene->mRootNode, vertices, indices, material, bones, glm::inverse(global_transform));
 }
 
 void Model::process_materials(const aiScene* scene)
@@ -325,6 +340,20 @@ void Model::process_materials(const aiScene* scene)
 
     for (int i = 0; i < scene->mNumMaterials; i++) {
         const aiMaterial* a_material = scene->mMaterials[i];
+
+        float roughness = 0.8f;
+        float metallic = 0.0f;
+
+        /* XXX: workaround */
+        aiString mat_name;
+        if (AI_SUCCESS == a_material->Get(AI_MATKEY_NAME, mat_name)) {
+            cout << mat_name.data << endl;
+            if (string(mat_name.data).find("equipment", 0) != string::npos) {
+                cout << "Workaround" << endl;
+                metallic = 0.8f;
+                roughness = 0.5f;
+            }
+        }
 
         if (a_material->GetTextureCount(aiTextureType_DIFFUSE) == 0) {
             materials[i] = nullptr;
@@ -342,28 +371,17 @@ void Model::process_materials(const aiScene* scene)
         while (cur > 0 && fullpath[cur-1] != '/' && fullpath[cur-1] != '\\') cur--;
         fullpath = fullpath.substr(cur, fullpath.length() - cur);
 
-        PMaterial material(new Material(fullpath));
+        PMaterial material(new Material(roughness, metallic, fullpath));
         materials[i] = material;
     }
 }
 
-void Model::start_animation(InternString name)
+aiAnimation* Model::get_animation(InternString name) const
 {
     auto it = animations.find(name);
     if (it == animations.end()) {
-        THROW_EXCEPT(E_INVALID_PARAM, "Model::start_animation()", "no such animation '" + string(name.c_str()) + "'");
+        return nullptr;
     }
-
-    aiAnimation* animation = it->second;
-    for (int i = 0; i < meshes.size(); i++) {
-        meshes[i].start_animation(animation);
-    }
-    current_animation = animation;
+    return it->second;
 }
 
-void Model::update_animation(float dt)
-{
-    for (int i = 0; i < meshes.size(); i++) {
-        meshes[i].update_animation(dt);
-    }
-}

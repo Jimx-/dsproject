@@ -60,7 +60,8 @@ SET(WEEABOO_SRCLIST
         src/intern_string.cpp
         src/config.cpp
         src/string_utils.cpp
-        src/exception.cpp)
+        src/exception.cpp
+        src/animation.cpp src/animation_manager.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} pthread)

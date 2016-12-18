@@ -17,8 +17,18 @@ public:
     static const InternString MVP;
     static const InternString MODEL;
     static const InternString VIEW;
+    static const InternString VIEW_POS;
     static const InternString PROJECTION;
     static const InternString DIFFUSE_TEXTURE;
+    static const InternString BONE_TRANSFORMS;
+    static const InternString MAT_ROUGHNESS;
+    static const InternString MAT_METALLIC;
+
+    static const InternString GBUFFER_POSITION;
+    static const InternString GBUFFER_NORMAL;
+    static const InternString GBUFFER_ALBEDO_SPEC;
+
+    static const int MAX_BONE_TRANSFORMS = 100;
 
     struct Binding {
         int first, second;
@@ -34,6 +44,7 @@ public:
 
     void uniform(UniformID id, float v0, float v1, float v2 = 0.0f, float v3 = 0.0f);
     void uniform(UniformID id, int i0);
+    void uniform(UniformID id, float f0);
     void uniform(UniformID id, GLsizei count, GLboolean transpose, const GLfloat* mat);
 
 private:
@@ -43,6 +54,7 @@ private:
     Binding get_uniform_binding(UniformID id);
     void uniform(const Binding& b, float v0, float v1, float v2, float v3);
     void uniform(const Binding& b, int i0);
+    void uniform(const Binding& b, float f0);
     void uniform(const Binding& b, GLsizei count, GLboolean transpose, const GLfloat* mat);
 };
 

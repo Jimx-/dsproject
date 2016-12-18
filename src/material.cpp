@@ -59,8 +59,10 @@ PMaterialTexture MaterialTexture::create_texture(const std::string& name)
     return it->second;
 }
 
-Material::Material(const std::string& diffuse_texture)
+Material::Material(float roughness, float metallic, const std::string& diffuse_texture)
 {
+    this->roughness = roughness;
+    this->metallic = metallic;
     this->diffuse_texture = MaterialTexture::create_texture(diffuse_texture);
 }
 

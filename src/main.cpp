@@ -1,13 +1,13 @@
 // Local Headers
 #include "config.h"
-#include "mesh.h"
 #include "log_manager.h"
+#include "animation_manager.h"
 #include "renderer.h"
+#include "animation_model.h"
 #include "exception.h"
 
 // System Headers
 #include <GLFW/glfw3.h>
-#include <glm/gtc/type_ptr.hpp>
 
 using namespace std;
 
@@ -63,6 +63,9 @@ void setup_context()
     gladLoadGL();
 
     new Renderer();
+    RENDERER.set_viewport(g_screen_width, g_screen_height);
+
+    new AnimationManager();
 }
 
 // The MAIN function, from here we start the application and run the game loop
@@ -72,43 +75,55 @@ int main()
     LOG.info("Starting game...");
 
     //loadModel
-    Model ourModel("resources/models/skeleton.FBX");
-    ourModel.load_animation("onehand_walk", "resources/animations/skeleton_onehand_walk.FBX");
-    ourModel.load_animation("onehand_attack", "resources/animations/skeleton_onehand_attack.FBX");
-    ourModel.load_animation("onehand_idle", "resources/animations/skeleton_onehand_idle.FBX");
-    ourModel.start_animation("onehand_walk");
+    PModel ourModel(new Model("resources/models/skeleton.FBX"));
+    ourModel->load_animation("onehand_walk", "resources/animations/skeleton_onehand_walk.FBX");
+    ourModel->load_animation("onehand_attack", "resources/animations/skeleton_onehand_attack.FBX");
+    ourModel->load_animation("onehand_idle", "resources/animations/skeleton_onehand_idle.FBX");
 
-    RENDERER.use_shader(Renderer::BONE_ANIM_SHADER);
+    int N = 12;
+    vector<AnimationModel*> models;
+    for (int i = 0; i < N; i++) {
+        models.push_back(new AnimationModel(ourModel));
+        models[i]->start_animation("onehand_walk");
+    }
 
     float angle = 0.0f;
+    double last_time = glfwGetTime();
+    double current_time;
+
+    RENDERER.add_light(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), 0.5f, 1.0f);
+    RENDERER.add_light(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
+    RENDERER.add_light(glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
         // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
 
-        // Render
-        // Clear the colorbuffer
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        current_time = glfwGetTime();
+        float dt = (float) current_time - (float) last_time;
+        last_time = current_time;
+        ANIMATION_MANAGER.update(dt);
 
-        // Draw the triangle
-        angle += 0.01f;
-        ourModel.update_animation(0.01f);
+        if (dt > 0) {
+            char title[100];
+            sprintf(title, "Weeaboo [fps: %d]", (int) (1 / dt));
+            glfwSetWindowTitle(window, title);
+        }
 
-        glm::mat4 model;
-        //model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f)); // Translate it down a bit so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));	// It's a bit too big for our scene, so scale it down
-        RENDERER.uniform(ShaderProgram::MODEL, 1, GL_FALSE, glm::value_ptr(model));
-        glm::mat4 view;
-        view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        RENDERER.uniform(ShaderProgram::VIEW, 1, GL_FALSE, glm::value_ptr(view));
-        glm::mat4 projection;
-        projection = glm::perspective(45.0f, g_screen_width / (GLfloat) g_screen_height, 0.1f, 100.0f);
-        RENDERER.uniform(ShaderProgram::PROJECTION, 1, GL_FALSE, glm::value_ptr(projection));
+        RENDERER.begin_frame();
 
-        ourModel.draw();
-        // Swap the screen buffers
+        for (int i = 0; i < N; i++) {
+            RENDERER.push_matrix();
+            RENDERER.translate((float)4 * ((i / 3) - 1.5f), -2.0f, (float) -4 * (i % 3));
+            RENDERER.rotate(angle, 0.0f, 1.0f, 0.0f);
+            RENDERER.scale(0.04f, 0.04f, 0.04f);
+            models[i]->draw(RENDERER);
+            RENDERER.pop_matrix();
+        }
+
+        RENDERER.end_frame();
+
         glfwSwapBuffers(window);
     }
     // Properly de-allocate all resources once they've outlived their purpose
