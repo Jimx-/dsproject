@@ -5,7 +5,7 @@
 #ifndef GLITTER_CAMERA_H
 #define GLITTER_CAMERA_H
 
-#include <GL/gl.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -19,6 +19,7 @@ public:
     };
 
     const static GLfloat DEFAULT_YAW;
+#undef DEFAULT_PITCH
     const static GLfloat DEFAULT_PITCH;
     const static GLfloat DEFAULT_SPEED;
     const static GLfloat DEFAULT_SENSITIVITY;

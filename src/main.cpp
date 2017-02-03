@@ -43,6 +43,8 @@ void load_config()
 		/* fullscreen */
 		string fullscreen = graphics_config.get("fullscreen", "false").asString();
 		g_fullscreen = (fullscreen == "true");
+
+		g_MSAA = graphics_config.get("MSAA", "0").asInt();
     }
 }
 
@@ -62,6 +64,10 @@ void setup_context()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
+	if (g_MSAA > 0) {
+		glfwWindowHint(GLFW_SAMPLES, g_MSAA);
+	}
 
     // Create a GLFWwindow object that we can use for GLFW's functions
 	GLFWmonitor* monitor = nullptr;
@@ -85,20 +91,30 @@ Camera camera(10.0f, 3.0f, 10.0f, 0.0f, 1.0f, 0.0f);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     Camera::Direction dir;
+	bool move = false;
     if (key == GLFW_KEY_W) {
         dir = Camera::Direction::FORWARD;
+		move = true;
     }
     if (key == GLFW_KEY_S) {
         dir = Camera::Direction::BACK;
+		move = true;
     }
     if (key == GLFW_KEY_A) {
         dir = Camera::Direction::LEFT;
+		move = true;
     }
     if (key == GLFW_KEY_D) {
         dir = Camera::Direction::RIGHT;
+		move = true;
     }
-    if (action != GLFW_RELEASE)
-        camera.processkeyboard(dir, 0.1f);
+	if (action != GLFW_RELEASE) {
+		if (move) camera.processkeyboard(dir, 0.1f);
+		else if (key == GLFW_KEY_ESCAPE) {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	}
+
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
@@ -115,20 +131,7 @@ int main()
     setup_context();
     LOG.info("Starting game...");
 
-    //loadModel
-    PModel ourModel(new Model("resources/models/skeleton.FBX"));
-    ourModel->load_animation("onehand_walk", "resources/animations/skeleton_onehand_walk.FBX");
-    ourModel->load_animation("onehand_attack", "resources/animations/skeleton_onehand_attack.FBX");
-    ourModel->load_animation("onehand_idle", "resources/animations/skeleton_onehand_idle.FBX");
-
     PRenderable map(new Map(30, 30));
-
-    int N = 12;
-    vector<AnimationModel*> models;
-    for (int i = 0; i < N; i++) {
-        models.push_back(new AnimationModel(ourModel));
-        models[i]->start_animation("onehand_attack");
-    }
 
     float angle = -90.0f;
     double last_time = glfwGetTime();

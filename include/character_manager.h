@@ -15,10 +15,17 @@ public:
         chars.push_back(std::shared_ptr<T>(new T(std::forward<Args>(args)...)));
     }
 
+	template <typename T, typename ... Args>
+	typename std::enable_if<std::is_base_of<BaseCharacter, typename std::decay<T>::type>::value>::type spawn_item(Args&&... args)
+	{
+		items.push_back(std::shared_ptr<T>(new T(std::forward<Args>(args)...)));
+	}
+
     void submit(Renderer& renderer) const;
 
 private:
     std::vector<PCharacter> chars;
+	std::vector<PCharacter> items;
 };
 
 #define CHARACTER_MANAGER CharacterManager::get_singleton()

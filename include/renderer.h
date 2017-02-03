@@ -35,6 +35,8 @@ public:
     static const InternString SSAO_SHADER;
     static const InternString SSAO_BLUR_SHADER;
     static const InternString DEPTH_MAP_SHADER;
+	static const InternString HDR_BLEND_SHADER;
+	static const InternString GAUSSIAN_BLUR_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
     static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
@@ -117,6 +119,11 @@ private:
     GLuint depth_map_fbo;
     GLuint depth_cubemap;
 
+	GLuint hdr_fbo;
+	GLuint hdr_buffers[2];
+	GLuint bloom_blur_fbo[2];
+	GLuint bloom_blur_buffers[2];
+
     void setup_gbuffer();
     void update_mvp();
 
@@ -130,6 +137,9 @@ private:
 
     void setup_shadow_map();
     void shadow_map_pass();
+
+	void setup_HDR();
+	void post_process_pass();
 };
 
 #define RENDERER Renderer::get_singleton()

@@ -11,7 +11,7 @@ public:
 protected:
     void init_model();
     virtual AnimationModel* get_model() const = 0;
-    virtual float get_scale_factor() const = 0;
+	virtual void intrinsic_transform(Renderer&) { }
 
     BaseCharacter(glm::vec3 pos);
 
@@ -25,10 +25,20 @@ class SkeletonCharacter : public BaseCharacter {
 private:
     static PModel _prepare_model();
     virtual AnimationModel* get_model() const override;
-    virtual float get_scale_factor() const { return 0.02f; }
+	virtual void intrinsic_transform(Renderer& renderer);
 
 public:
     SkeletonCharacter(glm::vec3 pos);
+};
+
+class TrapItem : public BaseCharacter {
+private:
+	static PModel _prepare_model();
+	virtual AnimationModel* get_model() const override;
+	virtual void intrinsic_transform(Renderer& renderer);
+
+public:
+	TrapItem(glm::vec3 pos);
 };
 
 #endif

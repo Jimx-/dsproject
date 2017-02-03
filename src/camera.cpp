@@ -6,7 +6,7 @@
 
 const GLfloat Camera::DEFAULT_YAW = -90.0f;
 const GLfloat Camera::DEFAULT_PITCH = 0.0f;
-const GLfloat Camera::DEFAULT_SPEED = 1.0f;
+const GLfloat Camera::DEFAULT_SPEED = 1.5f;
 const GLfloat Camera::DEFAULT_SENSITIVITY = 0.06f;
 const GLfloat Camera::DEFAULT_ZOOM = 45.0f;
 

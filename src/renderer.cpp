@@ -28,6 +28,7 @@ Renderer::Renderer()
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     //glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
     //glEnable(GL_CULL_FACE);
 
     /* setup matrix stack */
@@ -65,9 +66,21 @@ Renderer::Renderer()
     PShaderProgram depth_map_shader(new ShaderProgram("resources/shaders/depth_map.vert", "resources/shaders/depth_map.frag", "resources/shaders/depth_map.geom"));
     shaders[DEPTH_MAP_SHADER] = depth_map_shader;
 
+	PShaderProgram hdr_blend_shader(new ShaderProgram("resources/shaders/screen_quad.vert", "resources/shaders/hdr_blend.frag"));
+	shaders[HDR_BLEND_SHADER] = hdr_blend_shader;
+	use_shader(HDR_BLEND_SHADER);
+	hdr_blend_shader->uniform("uHDRInput", 0);
+	hdr_blend_shader->uniform("uBloomBlur", 1);
+
+	PShaderProgram gaussian_blur_shader(new ShaderProgram("resources/shaders/screen_quad.vert", "resources/shaders/gaussian_blur.frag"));
+	shaders[GAUSSIAN_BLUR_SHADER] = gaussian_blur_shader;
+	use_shader(GAUSSIAN_BLUR_SHADER);
+	gaussian_blur_shader->uniform("uInput", 0);
+
     setup_gbuffer();
     setup_quad();
     setup_SSAO();
+	setup_HDR();
     setup_shadow_map();
 }
 
@@ -194,6 +207,50 @@ void Renderer::setup_shadow_map()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::setup_HDR()
+{
+	glGenFramebuffers(1, &hdr_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, hdr_fbo);
+	glGenTextures(2, hdr_buffers);
+	for (GLuint i = 0; i < 2; i++)
+	{
+		glBindTexture(GL_TEXTURE_2D, hdr_buffers[i]);
+		glTexImage2D(
+			GL_TEXTURE_2D, 0, GL_RGB16F, g_screen_width, g_screen_height, 0, GL_RGB, GL_FLOAT, NULL
+			);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		// attach texture to framebuffer
+		glFramebufferTexture2D(
+			GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, hdr_buffers[i], 0
+			);
+	}
+	GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, attachments);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glGenFramebuffers(2, bloom_blur_fbo);
+	glGenTextures(2, bloom_blur_buffers);
+	for (GLuint i = 0; i < 2; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, bloom_blur_fbo[i]);
+		glBindTexture(GL_TEXTURE_2D, bloom_blur_buffers[i]);
+		glTexImage2D(
+			GL_TEXTURE_2D, 0, GL_RGB16F, g_screen_width, g_screen_height, 0, GL_RGB, GL_FLOAT, NULL
+			);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(
+			GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloom_blur_buffers[i], 0
+			);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+}
+
 void Renderer::set_viewport(int width, int height)
 {
     projection = glm::perspective(FOV, width / (float) height, Z_NEAR, Z_FAR);
@@ -270,6 +327,7 @@ void Renderer::end_frame()
 
     SSAO_pass();
     render_lighting_pass();
+	post_process_pass();
 
     while (xforms.size() > 1) xforms.pop();
 }
@@ -344,10 +402,12 @@ void Renderer::render_quad()
 }
 
 void Renderer::render_lighting_pass()
-{
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+{   
     use_shader(LIGHTING_PASS_SHADER);
-    update_mvp();
+	glBindFramebuffer(GL_FRAMEBUFFER, hdr_fbo);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	update_mvp();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_position);
     glActiveTexture(GL_TEXTURE1);
@@ -378,12 +438,13 @@ void Renderer::render_lighting_pass()
         glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].linear").c_str()), lights[i].linear);
         glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].quadratic").c_str()), lights[i].quadratic);
 
-        float intensity = RandomUtils::random_int(940, 1000) / 1000.0;
+        float intensity = RandomUtils::random_int(900, 1000) / 1000.0;
         glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].intensity").c_str()), intensity);
     }
     uniform(ShaderProgram::VIEW_POS, view_pos.x, view_pos.y, view_pos.z);
 
     render_quad();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::SSAO_pass()
@@ -446,4 +507,37 @@ void Renderer::shadow_map_pass()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glViewport(0, 0, g_screen_width, g_screen_height);
+}
+
+void Renderer::post_process_pass()
+{
+	use_shader(GAUSSIAN_BLUR_SHADER);
+	GLboolean horizontal = true, first_iteration = true;
+	GLuint amount = 10;
+	for (GLuint i = 0; i < amount; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, bloom_blur_fbo[horizontal]);
+		uniform("uHorizontal", (int)horizontal);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(
+			GL_TEXTURE_2D, first_iteration ? hdr_buffers[1] : bloom_blur_buffers[!horizontal]
+			);
+		render_quad();
+		horizontal = !horizontal;
+		if (first_iteration)
+			first_iteration = false;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	use_shader(HDR_BLEND_SHADER);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, hdr_buffers[0]);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bloom_blur_buffers[horizontal]);
+
+	render_quad();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

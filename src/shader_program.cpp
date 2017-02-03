@@ -216,8 +216,11 @@ void ShaderProgram::uniform(const ShaderProgram::Binding& b, int i0)
         case GL_SAMPLER_CUBE:
             glUniform1i(id, i0);
             break;
+		case GL_BOOL:
+			glUniform1i(id, i0);
+			break;
         default:
-            LOG.error("mismatch uniform binding %d", b.first);
+            LOG.error("mismatch uniform binding (%d, %d)(u1i)", b.first, b.second);
         }
     }
 }

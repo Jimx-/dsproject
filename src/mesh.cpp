@@ -215,6 +215,7 @@ unsigned int Mesh::find_rotation(float animation_time, const aiNodeAnim* node_an
             return i;
         }
     }
+	return 0;
 }
 
 Model::Model(const char* path)
@@ -313,29 +314,37 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
     Mesh::BoneMapping bones;
     int num_bones = 0;
 
-    for (unsigned int i = 0; i < mesh->mNumBones; i++) {
-        string bone_name(mesh->mBones[i]->mName.data);
+	/* default bone data */
+	if (!mesh->mNumBones) {
+		for (GLuint i = 0; i < mesh->mNumVertices; i++) {
+			vertices[i].add_bone_data(0, 1.0f);
+		}
+	} else {
+		for (unsigned int i = 0; i < mesh->mNumBones; i++) {
+			string bone_name(mesh->mBones[i]->mName.data);
 
-        int bone_idx;
-        if (bones.find(bone_name) == bones.end()) {
-            bone_idx = num_bones++;
+			int bone_idx;
+			if (bones.find(bone_name) == bones.end()) {
+				bone_idx = num_bones++;
 
-            Mesh::Bone new_bone;
-            new_bone.id = bone_idx;
-            bones[bone_name] = new_bone;
-        } else {
-            bone_idx = bones[bone_name].id;
-        }
+				Mesh::Bone new_bone;
+				new_bone.id = bone_idx;
+				bones[bone_name] = new_bone;
+			}
+			else {
+				bone_idx = bones[bone_name].id;
+			}
 
-        bones[bone_name].id = bone_idx;
-        copy_matrix(mesh->mBones[i]->mOffsetMatrix, bones[bone_name].offset_matrix);
+			bones[bone_name].id = bone_idx;
+			copy_matrix(mesh->mBones[i]->mOffsetMatrix, bones[bone_name].offset_matrix);
 
-        for (unsigned int j = 0 ; j < mesh->mBones[i]->mNumWeights ; j++) {
-			unsigned int vid = mesh->mBones[i]->mWeights[j].mVertexId;
-            float weight = mesh->mBones[i]->mWeights[j].mWeight;
-            vertices[vid].add_bone_data(bone_idx, weight);
-        }
-    }
+			for (unsigned int j = 0; j < mesh->mBones[i]->mNumWeights; j++) {
+				unsigned int vid = mesh->mBones[i]->mWeights[j].mVertexId;
+				float weight = mesh->mBones[i]->mWeights[j].mWeight;
+				vertices[vid].add_bone_data(bone_idx, weight);
+			}
+		}
+	}
 
     glm::mat4 global_transform;
     copy_matrix(scene->mRootNode->mTransformation, global_transform);
@@ -352,9 +361,10 @@ void Model::process_materials(const aiScene* scene)
         float roughness = 0.8f;
         float metallic = 0.0f;
 
-        /* XXX: workaround */
+        /* XXX: workaround: the model assets have quite broken material info, so specify them here manually */
         aiString mat_name;
         if (AI_SUCCESS == a_material->Get(AI_MATKEY_NAME, mat_name)) {
+			LOG.info("%s", mat_name.data);
             if (string(mat_name.data).find("equipment", 0) != string::npos) {
                 metallic = 0.8f;
                 roughness = 0.5f;

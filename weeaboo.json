@@ -1,7 +1,8 @@
 {
   "graphics": {
     "video_mode": "1366x768",
-    "fullscreen":  "false"
+    "fullscreen": "false",
+    "MSAA": 4
   }
 }
 

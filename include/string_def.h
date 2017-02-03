@@ -12,6 +12,8 @@ const InternString Renderer::LIGHTING_PASS_SHADER = "lighting_pass";
 const InternString Renderer::SSAO_SHADER = "SSAO_shader";
 const InternString Renderer::SSAO_BLUR_SHADER = "SSAO_blur_shader";
 const InternString Renderer::DEPTH_MAP_SHADER = "depth_map_shader";
+const InternString Renderer::HDR_BLEND_SHADER = "HDR_blend_shader";
+const InternString Renderer::GAUSSIAN_BLUR_SHADER = "gaussian_blur_shader";
 
 const InternString ShaderProgram::MVP = "uMVP";
 const InternString ShaderProgram::MODEL = "uModel";

@@ -34,8 +34,7 @@ void Map::setup_mesh()
         for (GLuint j = 0; j < height; j++) {
 
             char tile = generator.getTile(i, j);
-            if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn) {
-
+            if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn || tile == MapGenerator::Traps) {
                 for (int h = 0; h < 2; h++) {
                     int base = vertices.size();
                     for (int x = 0; x < 2; x++) {
@@ -61,17 +60,19 @@ void Map::setup_mesh()
                             vertices.push_back(vertex);
                         }
                     }
-                    indices.push_back(base);
+                    indices.push_back(base + 0);
                     indices.push_back(base + 1);
                     indices.push_back(base + 2);
 
                     indices.push_back(base + 1);
-                    indices.push_back(base + 2);
                     indices.push_back(base + 3);
+                    indices.push_back(base + 2);
                 }
                 if (tile == MapGenerator::Spawn) {
                     CHARACTER_MANAGER.spawn<SkeletonCharacter>(glm::vec3((float)i, 0.0f, (float)j));
-                }
+				} else if (tile == MapGenerator::Tile::Traps) {
+					CHARACTER_MANAGER.spawn_item<TrapItem>(glm::vec3((float)i, 0.0f, (float)j));
+				}
             } else if (tile == MapGenerator::Tile::Wall) {
                 float start_x = i * TILE_SIZE;
                 float start_z = j * TILE_SIZE;
@@ -120,23 +121,25 @@ void Map::setup_mesh()
                         v2.add_bone_data(0, 1.0f);
                         vertices.push_back(v2);
                     }
-                    indices.push_back(base);
-                    indices.push_back(base + 1);
-                    indices.push_back(base + 2);
 
-                    indices.push_back(base + 1);
-                    indices.push_back(base + 2);
-                    indices.push_back(base + 3);
+					indices.push_back(base);
+					indices.push_back(base + 1);
+					indices.push_back(base + 2);
+
+					indices.push_back(base + 1);
+					indices.push_back(base + 3);
+					indices.push_back(base + 2);
+
                     start_x = x2;
                     start_z = z2;
                 }
             } else if (tile == MapGenerator::Tile::Torch) {
-                RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.8f, 0.5f), 0.1f, 0.05f);
-            }
+                RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.57f, 0.16f), 0.1f, 0.05f);
+			}
         }
     }
 
-    PMaterial material(new Material(0.6f, 0.1f, "dungeon.png", "dungeon_normal_map.png"));
+    PMaterial material(new Material(0.8f, 0.1f, "dungeon.png", "dungeon_normal_map.png"));
 
     Mesh::BoneMapping bones;
 

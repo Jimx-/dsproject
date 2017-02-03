@@ -56,7 +56,7 @@ void MapGenerator::generate(int maxFeatures, MapGenerator::Difficulty h)
         }
     }
 
-    for(int i = 0; i < h/4; i++)
+    for(int i = 0; i < h/3; i++)
     {
         if (!placeObject(Traps)) {
             std::cout << "Unable to place Traps.\n";
@@ -152,6 +152,7 @@ bool MapGenerator::set_torch(int x, int y, char dir){
             break;
 
     }
+	return true;
 }
 
 bool MapGenerator::createFeature()

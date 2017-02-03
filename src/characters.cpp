@@ -16,7 +16,7 @@ void BaseCharacter::draw(Renderer& renderer)
 {
     renderer.push_matrix();
     renderer.translate(pos[0] * Map::TILE_SIZE, 0.0f, pos[2] * Map::TILE_SIZE);
-    renderer.scale(get_scale_factor(), get_scale_factor(), get_scale_factor());
+	intrinsic_transform(renderer);
     model->draw(renderer);
     renderer.pop_matrix();
 }
@@ -41,3 +41,30 @@ AnimationModel* SkeletonCharacter::get_model() const
     return new AnimationModel(_prepare_model());
 }
 
+void SkeletonCharacter::intrinsic_transform(Renderer& renderer) 
+{
+	renderer.scale(0.02f, 0.02f, 0.02f);
+}
+
+TrapItem::TrapItem(glm::vec3 pos) : BaseCharacter(pos)
+{
+	init_model();
+}
+
+PModel TrapItem::_prepare_model()
+{
+	static PModel ourModel(new Model("resources/models/Trap_Needle.FBX"));
+	return ourModel;
+}
+
+AnimationModel* TrapItem::get_model() const
+{
+	return new AnimationModel(_prepare_model());
+}
+
+void TrapItem::intrinsic_transform(Renderer& renderer)
+{
+	renderer.translate(0.5f * Map::TILE_SIZE, 0.0f, 0.5f * Map::TILE_SIZE);
+	renderer.rotate(glm::radians(-90.0f), 1.0f, 0.0f, 0.0f);
+	renderer.scale(0.015f, 0.015f, 0.015f);
+}
