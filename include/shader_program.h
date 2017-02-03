@@ -20,6 +20,7 @@ public:
     static const InternString VIEW_POS;
     static const InternString PROJECTION;
     static const InternString DIFFUSE_TEXTURE;
+    static const InternString NORMAL_MAP;
     static const InternString BONE_TRANSFORMS;
     static const InternString MAT_ROUGHNESS;
     static const InternString MAT_METALLIC;
@@ -36,7 +37,7 @@ public:
         Binding(int first = -1, int second = -1) : first(first), second(second) { }
     };
 
-    ShaderProgram(const char * vertexPath, const char* fragmentPath);
+    ShaderProgram(const char * vertexPath, const char* fragmentPath, const char* geometryPath = nullptr);
     GLuint get_program() const { return program; }
 
     void bind();

@@ -9,6 +9,7 @@
 #include "intern_string.h"
 #include "singleton.h"
 #include "light.h"
+#include "camera.h"
 
 #include <map>
 #include <stack>
@@ -17,11 +18,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>
 
+class Renderable;
+using PRenderable = std::shared_ptr<Renderable>;
+
 class Renderer : public Singleton<Renderer> {
 public:
     Renderer();
 
     void set_viewport(int width, int height);
+    void update_camera(const Camera& camera);
 
     static const InternString LIGHTING_SHADER;
     static const InternString BONE_ANIM_SHADER;
@@ -29,8 +34,10 @@ public:
     static const InternString LIGHTING_PASS_SHADER;
     static const InternString SSAO_SHADER;
     static const InternString SSAO_BLUR_SHADER;
+    static const InternString DEPTH_MAP_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
+    static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
 
     static const int MAX_LIGHTS = 32;
 
@@ -66,10 +73,17 @@ public:
 
     void add_light(const glm::vec3& position, const glm::vec3& color, float linear = 0.5f, float quadratic = 1.0f);
 
+    void enqueue_renderable(PRenderable renderable);
+
 private:
     static const float Z_NEAR;
     static const float Z_FAR;
     static const float FOV;
+
+    static const int SHADOW_WIDTH = 1024;
+    static const int SHADOW_HEIGHT = 1024;
+    static const float SHADOW_NEAR;
+    static const float SHADOW_FAR;
 
     std::map<InternString, PShaderProgram> shaders;
     PShaderProgram current_shader;
@@ -79,7 +93,10 @@ private:
     glm::mat4 projection;
     std::stack<glm::mat4> xforms;
 
+    std::vector<PRenderable> render_queue;
+
     std::vector<Light> lights;
+    int shadow_map_light_index;
 
     GLuint gbuffer;
     GLuint rbo_depth;
@@ -97,6 +114,9 @@ private:
     GLuint ssao_color_buffer;
     GLuint ssao_color_buffer_blur;
 
+    GLuint depth_map_fbo;
+    GLuint depth_cubemap;
+
     void setup_gbuffer();
     void update_mvp();
 
@@ -107,6 +127,9 @@ private:
 
     void setup_SSAO();
     void SSAO_pass();
+
+    void setup_shadow_map();
+    void shadow_map_pass();
 };
 
 #define RENDERER Renderer::get_singleton()

@@ -27,8 +27,10 @@ void MaterialTexture::load_texture()
     // Set our texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
     // Set texture filtering
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // Load, create texture and generate mipmaps
     int width, height;
@@ -59,10 +61,11 @@ PMaterialTexture MaterialTexture::create_texture(const std::string& name)
     return it->second;
 }
 
-Material::Material(float roughness, float metallic, const std::string& diffuse_texture)
+Material::Material(float roughness, float metallic, const std::string& diffuse_texture, const std::string& normal_map)
 {
     this->roughness = roughness;
     this->metallic = metallic;
     this->diffuse_texture = MaterialTexture::create_texture(diffuse_texture);
+    this->normal_map = MaterialTexture::create_texture(normal_map);
 }
 

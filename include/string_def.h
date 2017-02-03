@@ -11,6 +11,7 @@ const InternString Renderer::GEOMETRY_PASS_SHADER = "geometry_pass";
 const InternString Renderer::LIGHTING_PASS_SHADER = "lighting_pass";
 const InternString Renderer::SSAO_SHADER = "SSAO_shader";
 const InternString Renderer::SSAO_BLUR_SHADER = "SSAO_blur_shader";
+const InternString Renderer::DEPTH_MAP_SHADER = "depth_map_shader";
 
 const InternString ShaderProgram::MVP = "uMVP";
 const InternString ShaderProgram::MODEL = "uModel";
@@ -18,6 +19,7 @@ const InternString ShaderProgram::VIEW = "uView";
 const InternString ShaderProgram::VIEW_POS = "uViewPos";
 const InternString ShaderProgram::PROJECTION = "uProjection";
 const InternString ShaderProgram::DIFFUSE_TEXTURE = "uDiffuse";
+const InternString ShaderProgram::NORMAL_MAP = "uNormalMap";
 const InternString ShaderProgram::BONE_TRANSFORMS = "uBoneTransforms[0]";
 
 const InternString ShaderProgram::MAT_ROUGHNESS = "uRoughness";

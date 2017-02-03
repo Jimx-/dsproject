@@ -36,6 +36,7 @@ void Mesh::draw(Renderer& renderer)
 {
     if (material) {
         material->get_diffuse_texture()->bind(Renderer::DIFFUSE_TEXTURE_TARGET);
+        material->get_normal_map()->bind(Renderer::NORMAL_MAP_TARGET);
         renderer.uniform(ShaderProgram::MAT_METALLIC, material->get_metallic());
         renderer.uniform(ShaderProgram::MAT_ROUGHNESS, material->get_roughness());
     }
@@ -73,6 +74,9 @@ void Mesh::setup_mesh()
 
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, bone_weights));
+
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, tangent));
 
     glBindVertexArray(0);
 }
@@ -227,7 +231,7 @@ void Model::draw(Renderer& renderer)
 
 void Model::load_model(std::string path) {
     Assimp::Importer* import = new Assimp::Importer();
-    const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs);
+    const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
     LOG.debug("Loading model '%s'", path.c_str());
     if(!scene){
@@ -282,6 +286,10 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
         SET_NORMAL(x, 0);
         SET_NORMAL(y, 1);
         SET_NORMAL(z, 2);
+#define SET_TANGENT(n, j) vertex.tangent[j] = mesh->mTangents[i].n
+        SET_TANGENT(x, 0);
+        SET_TANGENT(y, 1);
+        SET_TANGENT(z, 2);
 
         vertex.tex_coord[0] = mesh->mTextureCoords[0][i].x;
         vertex.tex_coord[1] = mesh->mTextureCoords[0][i].y;
@@ -347,9 +355,7 @@ void Model::process_materials(const aiScene* scene)
         /* XXX: workaround */
         aiString mat_name;
         if (AI_SUCCESS == a_material->Get(AI_MATKEY_NAME, mat_name)) {
-            cout << mat_name.data << endl;
             if (string(mat_name.data).find("equipment", 0) != string::npos) {
-                cout << "Workaround" << endl;
                 metallic = 0.8f;
                 roughness = 0.5f;
             }

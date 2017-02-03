@@ -61,7 +61,14 @@ SET(WEEABOO_SRCLIST
         src/config.cpp
         src/string_utils.cpp
         src/exception.cpp
-        src/animation.cpp src/animation_manager.cpp)
+        src/animation.cpp
+        src/animation_manager.cpp
+        src/map.cpp
+        src/map_generator.cpp
+        src/random_utils.cpp
+        src/camera.cpp
+        src/characters.cpp
+        src/character_manager.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})

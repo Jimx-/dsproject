@@ -3,10 +3,14 @@
 
 #include "renderer.h"
 
+#include <memory>
+
 class Renderable {
 public:
     virtual void draw(Renderer& renderer) = 0;
 };
+
+using PRenderable = std::shared_ptr<Renderable>;
 
 #endif
 

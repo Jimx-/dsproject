@@ -6,24 +6,29 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <random>
 #include "renderer.h"
+#include "renderable.h"
 #include "config.h"
 #include "log_manager.h"
 #include "exception.h"
+#include "random_utils.h"
 
 template <>
 Renderer* Singleton<Renderer>::singleton = nullptr;
 
-const float Renderer::FOV = 45.0f;
+const float Renderer::FOV = glm::radians(45.0f);
 const float Renderer::Z_NEAR = 0.1f;
 const float Renderer::Z_FAR = 100.0f;
+const float Renderer::SHADOW_NEAR = 1.0f;
+const float Renderer::SHADOW_FAR = 25.0f;
 
-static glm::vec3 view_pos(0.0f, 0.0f, 4.0f);
+static glm::vec3 view_pos(20.0f, 10.0f, 20.0f);
 
 Renderer::Renderer()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClearDepth(1.0f);
+    //glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE);
 
     /* setup matrix stack */
     xforms.push(glm::mat4());
@@ -33,6 +38,7 @@ Renderer::Renderer()
     shaders[GEOMETRY_PASS_SHADER] = geometry_pass;
     use_shader(GEOMETRY_PASS_SHADER);
     geometry_pass->uniform(ShaderProgram::DIFFUSE_TEXTURE, 0);
+    geometry_pass->uniform(ShaderProgram::NORMAL_MAP, 1);
 
     PShaderProgram lighting_pass(new ShaderProgram("resources/shaders/screen_quad.vert", "resources/shaders/lighting.frag"));
     shaders[LIGHTING_PASS_SHADER] = lighting_pass;
@@ -41,6 +47,8 @@ Renderer::Renderer()
     lighting_pass->uniform(ShaderProgram::GBUFFER_NORMAL, 1);
     lighting_pass->uniform(ShaderProgram::GBUFFER_ALBEDO_SPEC, 2);
     lighting_pass->uniform("uSSAOInput", 3);
+    lighting_pass->uniform("uDepthMap", 4);
+    lighting_pass->uniform("uFarPlane", SHADOW_FAR);
 
     PShaderProgram ssao_shader(new ShaderProgram("resources/shaders/screen_quad.vert", "resources/shaders/ssao.frag"));
     shaders[SSAO_SHADER] = ssao_shader;
@@ -54,9 +62,13 @@ Renderer::Renderer()
     use_shader(SSAO_BLUR_SHADER);
     ssao_blur_shader->uniform("uSSAOInput", 0);
 
+    PShaderProgram depth_map_shader(new ShaderProgram("resources/shaders/depth_map.vert", "resources/shaders/depth_map.frag", "resources/shaders/depth_map.geom"));
+    shaders[DEPTH_MAP_SHADER] = depth_map_shader;
+
     setup_gbuffer();
     setup_quad();
     setup_SSAO();
+    setup_shadow_map();
 }
 
 void Renderer::setup_gbuffer()
@@ -159,6 +171,29 @@ void Renderer::setup_SSAO()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::setup_shadow_map()
+{
+    glGenFramebuffers(1, &depth_map_fbo);
+    // Create depth cubemap texture
+    glGenTextures(1, &depth_cubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depth_cubemap);
+    for (GLuint i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    // Attach cubemap as depth map FBO's color buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_cubemap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        THROW_EXCEPT(E_RENDER_ENGINE_ERROR, "Renderer::setup_shadow_map()", "cannot setup shadow map buffer");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void Renderer::set_viewport(int width, int height)
 {
     projection = glm::perspective(FOV, width / (float) height, Z_NEAR, Z_FAR);
@@ -212,19 +247,25 @@ void Renderer::update_mvp()
 
 void Renderer::begin_frame()
 {
-    model = xforms.top();
-    view = glm::lookAt(view_pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    render_queue.clear();
+}
 
-    update_mvp();
+void Renderer::end_frame()
+{
+    model = xforms.top();
+
+    shadow_map_pass();
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     use_shader(GEOMETRY_PASS_SHADER);
-}
+    update_mvp();
 
-void Renderer::end_frame()
-{
+    for (int i = 0; i < render_queue.size(); i++) {
+        render_queue[i]->draw(*this);
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     SSAO_pass();
@@ -249,6 +290,29 @@ void Renderer::add_light(const glm::vec3& position, const glm::vec3& color, floa
 {
     if (lights.size() >= MAX_LIGHTS) return;
     lights.push_back(Light(position, color, linear, quadratic));
+}
+
+void Renderer::enqueue_renderable(PRenderable renderable)
+{
+    render_queue.push_back(renderable);
+}
+
+void Renderer::update_camera(const Camera& camera)
+{
+    glm::vec3 cam_pos = camera.get_position();
+    int min_index = 0;
+    float min_dist = glm::distance(cam_pos, lights[0].position);
+    for (int i = 1; i < lights.size(); i++) {
+        float dist = glm::distance(cam_pos, lights[i].position);
+        if (dist < min_dist) {
+            min_dist = dist;
+            min_index = i;
+        }
+    }
+    shadow_map_light_index = min_index;
+
+    view = camera.get_view_matrix();
+    update_mvp();
 }
 
 void Renderer::setup_quad()
@@ -283,7 +347,7 @@ void Renderer::render_lighting_pass()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     use_shader(LIGHTING_PASS_SHADER);
-
+    update_mvp();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, g_position);
     glActiveTexture(GL_TEXTURE1);
@@ -292,15 +356,30 @@ void Renderer::render_lighting_pass()
     glBindTexture(GL_TEXTURE_2D, g_albedo_spec);
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, ssao_color_buffer_blur);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depth_cubemap);
+    glm::vec3 shadow_light_pos = lights[shadow_map_light_index].position;
+    uniform("uShadowLightPos", shadow_light_pos.x, shadow_light_pos.y, shadow_light_pos.z);
+    uniform("uShadowLightIndex", shadow_map_light_index);
 
     GLuint lighting_program = shaders[LIGHTING_PASS_SHADER]->get_program();
     for (GLuint i = 0; i < lights.size(); i++)
     {
         glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].position").c_str()), 1, &lights[i].position[0]);
-        glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].color").c_str()), 1, &lights[i].color[0]);
+        if (0) {
+            glm::vec3 red = glm::vec3(1.0f, 0.0f, 0.0f);
+            glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].color").c_str()),
+                         1, &red[0]);
+        } else {
+            glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].color").c_str()),
+                         1, &lights[i].color[0]);
+        }
         // Update attenuation parameters and calculate radius
         glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].linear").c_str()), lights[i].linear);
         glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].quadratic").c_str()), lights[i].quadratic);
+
+        float intensity = RandomUtils::random_int(940, 1000) / 1000.0;
+        glUniform1f(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].intensity").c_str()), intensity);
     }
     uniform(ShaderProgram::VIEW_POS, view_pos.x, view_pos.y, view_pos.z);
 
@@ -334,4 +413,37 @@ void Renderer::SSAO_pass()
     glBindTexture(GL_TEXTURE_2D, ssao_color_buffer);
     render_quad();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::shadow_map_pass()
+{
+    glm::vec3 lightPos = lights[shadow_map_light_index].position;
+
+    float aspect = (float) SHADOW_WIDTH / (float) SHADOW_HEIGHT;
+    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, SHADOW_NEAR, SHADOW_FAR);
+    std::vector<glm::mat4> shadowTransforms;
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 1.0,  0.0,  0.0), glm::vec3(0.0, -1.0,  0.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0,  0.0,  0.0), glm::vec3(0.0, -1.0,  0.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0,  1.0,  0.0), glm::vec3(0.0,  0.0,  1.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0, -1.0,  0.0), glm::vec3(0.0,  0.0, -1.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0,  0.0,  1.0), glm::vec3(0.0, -1.0,  0.0)));
+    shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0,  0.0, -1.0), glm::vec3(0.0, -1.0,  0.0)));
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depth_map_fbo);
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    use_shader(DEPTH_MAP_SHADER);
+    update_mvp();
+    glClear(GL_DEPTH_BUFFER_BIT);
+    for (GLuint i = 0; i < 6; ++i)
+        glUniformMatrix4fv(glGetUniformLocation(shaders[DEPTH_MAP_SHADER]->get_program(), ("uShadowMatrices[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
+    uniform("uFarPlane", SHADOW_FAR);
+    uniform("uLightPos", lightPos[0], lightPos[1], lightPos[2]);
+
+    for (int i = 0; i < render_queue.size(); i++) {
+        render_queue[i]->draw(*this);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glViewport(0, 0, g_screen_width, g_screen_height);
 }

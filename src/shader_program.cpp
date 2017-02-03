@@ -9,11 +9,10 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 
 using namespace std;
 
-ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
+ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath, const char* geometryPath)
 {
     string vertexCode;
     string fragmentCode;
@@ -67,11 +66,44 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
         THROW_EXCEPT(E_RESOURCE_ERROR, "ShaderProgram::ShaderProgram()", "SHADER::FRAGMENT::COMPILATION_FAILED(" + string(infoLog) + ")");
     }
 
+
     this->program = glCreateProgram();
     glAttachShader(this->program, vertex);
     glAttachShader(this->program, fragment);
-    glLinkProgram(this->program);
 
+    GLuint geom;
+    if (geometryPath) {
+        string geometryCode;
+        ifstream gShaderFile;
+
+        gShaderFile.exceptions(std::ifstream::badbit);
+        try {
+            gShaderFile.open(geometryPath);
+
+            stringstream gShaderStream;
+
+            gShaderStream << gShaderFile.rdbuf();
+
+            gShaderFile.close();
+            geometryCode = gShaderStream.str();
+        }
+        catch (ifstream::failure e) {
+            THROW_EXCEPT(E_FILE_NOT_FOUND, "ShaderProgram::ShaderProgram()", "shader file is not successfully read");
+        }
+        const GLchar *gShaderCode = geometryCode.c_str();
+        geom = glCreateShader(GL_GEOMETRY_SHADER);
+        glShaderSource(geom, 1, &gShaderCode, NULL);
+        glCompileShader(geom);
+
+        glGetShaderiv(geom, GL_COMPILE_STATUS, &success);
+        if (!success) {
+            glGetShaderInfoLog(geom, 512, NULL, infoLog);
+            THROW_EXCEPT(E_RESOURCE_ERROR, "ShaderProgram::ShaderProgram()", "SHADER::GEOMETRY::COMPILATION_FAILED(" + string(infoLog) + ")");
+        }
+        glAttachShader(this->program, geom);
+    }
+
+    glLinkProgram(this->program);
     glGetProgramiv(this->program, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(this->program, 512, NULL, infoLog);
@@ -97,6 +129,7 @@ ShaderProgram::ShaderProgram(const char * vertexPath, const char* fragmentPath)
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);
+    if (geometryPath) glDeleteShader(geom);
 }
 
 void ShaderProgram::uniform(UniformID id, float v0, float v1, float v2, float v3)
@@ -114,6 +147,7 @@ void ShaderProgram::uniform(UniformID id, int i0)
 void ShaderProgram::uniform(UniformID id, float f0)
 {
     Binding b = get_uniform_binding(id);
+
     uniform(b, f0);
 }
 
@@ -160,6 +194,8 @@ void ShaderProgram::uniform(const ShaderProgram::Binding& b, float v0, float v1,
         case GL_FLOAT_VEC4:
             glUniform4f(id, v0, v1, v2, v3);
             break;
+        default:
+            LOG.error("mismatch uniform binding %d", b.first);
         }
     }
 }
@@ -177,6 +213,11 @@ void ShaderProgram::uniform(const ShaderProgram::Binding& b, int i0)
         case GL_SAMPLER_2D:
             glUniform1i(id, i0);
             break;
+        case GL_SAMPLER_CUBE:
+            glUniform1i(id, i0);
+            break;
+        default:
+            LOG.error("mismatch uniform binding %d", b.first);
         }
     }
 }
@@ -191,6 +232,8 @@ void ShaderProgram::uniform(const ShaderProgram::Binding& b, float f0)
         case GL_FLOAT:
             glUniform1f(id, f0);
             break;
+        default:
+            LOG.error("mismatch uniform binding %d", b.first);
         }
     }
 }
@@ -205,6 +248,8 @@ void ShaderProgram::uniform(const Binding& b, GLsizei count, GLboolean transpose
         case GL_FLOAT_MAT4:
             glUniformMatrix4fv(id, count, transpose, mat);
             break;
+        default:
+            LOG.error("mismatch uniform binding %d", b.first);
         }
     }
 }

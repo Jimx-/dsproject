@@ -24,13 +24,15 @@ private:
 
 class Material {
 public:
-    Material(float roughness, float metallic, const std::string& diffuse_texture);
+    Material(float roughness, float metallic, const std::string& diffuse_texture, const std::string& normal_map = "flat_normal_map.png");
 
     PMaterialTexture get_diffuse_texture() const { return diffuse_texture; }
+    PMaterialTexture get_normal_map() const { return normal_map; }
     float get_metallic() const { return metallic; }
     float get_roughness() const { return roughness; }
 private:
     PMaterialTexture diffuse_texture;
+    PMaterialTexture normal_map;
     float roughness;
     float metallic;
 };

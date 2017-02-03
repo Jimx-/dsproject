@@ -2,9 +2,13 @@
 #include "config.h"
 #include "log_manager.h"
 #include "animation_manager.h"
+#include "character_manager.h"
 #include "renderer.h"
 #include "animation_model.h"
 #include "exception.h"
+#include "map.h"
+
+#include "characters.h"
 
 // System Headers
 #include <GLFW/glfw3.h>
@@ -74,6 +78,35 @@ void setup_context()
     RENDERER.set_viewport(g_screen_width, g_screen_height);
 
     new AnimationManager();
+    new CharacterManager();
+}
+
+Camera camera(10.0f, 3.0f, 10.0f, 0.0f, 1.0f, 0.0f);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+{
+    Camera::Direction dir;
+    if (key == GLFW_KEY_W) {
+        dir = Camera::Direction::FORWARD;
+    }
+    if (key == GLFW_KEY_S) {
+        dir = Camera::Direction::BACK;
+    }
+    if (key == GLFW_KEY_A) {
+        dir = Camera::Direction::LEFT;
+    }
+    if (key == GLFW_KEY_D) {
+        dir = Camera::Direction::RIGHT;
+    }
+    if (action != GLFW_RELEASE)
+        camera.processkeyboard(dir, 0.1f);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    static float last_x, last_y;
+    camera.processmouse(xpos - last_x, -(ypos - last_y), true);
+    last_x = xpos;
+    last_y = ypos;
 }
 
 // The MAIN function, from here we start the application and run the game loop
@@ -88,6 +121,8 @@ int main()
     ourModel->load_animation("onehand_attack", "resources/animations/skeleton_onehand_attack.FBX");
     ourModel->load_animation("onehand_idle", "resources/animations/skeleton_onehand_idle.FBX");
 
+    PRenderable map(new Map(30, 30));
+
     int N = 12;
     vector<AnimationModel*> models;
     for (int i = 0; i < N; i++) {
@@ -95,18 +130,15 @@ int main()
         models[i]->start_animation("onehand_attack");
     }
 
-    float angle = 0.0f;
+    float angle = -90.0f;
     double last_time = glfwGetTime();
     double current_time;
-
-    /*RENDERER.add_light(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), 0.5f, 1.0f);
-    RENDERER.add_light(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
-    RENDERER.add_light(glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.0f));
-	RENDERER.add_light(glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 1.0f));
-	RENDERER.add_light(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.5f));*/
-	for (int i = 0; i < 32; i++) {
-		RENDERER.add_light(glm::vec3((float)4 * ((i / 3) - 1.5f), 0.0f, (float)-4 * (i % 3) + 0.3f), glm::vec3(1.0f, 0.8f, 0.5f), 0.5f, 1.0f);
-	}
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+	/*for (int i = 0; i < 32; i++) {
+		RENDERER.add_light(glm::vec3((float)4 * ((i / 3) - 1.5f), 1.0f, (float)4 * (i % 3) + 0.3f), glm::vec3(1.0f, 0.8f, 0.5f), 0.4f, 0.5f);
+	} */
     // Game loop
 	int step = 0;
     while (!glfwWindowShouldClose(window))
@@ -119,21 +151,31 @@ int main()
         last_time = current_time;
         ANIMATION_MANAGER.update(dt);
 
+
         if (dt > 0) {
             char title[100];
-            sprintf(title, "Weeaboo [fps: %d]", (int) (1 / dt));
+            auto pos = camera.get_position();
+            sprintf(title, "Weeaboo [fps: %d, X = %f, Z = %f]", (int) (1 / dt), pos[0], pos[2]);
             glfwSetWindowTitle(window, title);
         }
-		//angle += 0.1f;
+
+        angle += 0.1f;
+        //camera.set_yaw(angle);
         RENDERER.begin_frame();
-        for (int i = 0; i < N; i++) {
+        RENDERER.update_camera(camera);
+
+        //map.draw(RENDERER);
+        RENDERER.enqueue_renderable(map);
+        CHARACTER_MANAGER.submit(RENDERER);
+
+        /*for (int i = 0; i < N; i++) {
             RENDERER.push_matrix();
-            RENDERER.translate((float)4 * ((i / 3) - 1.5f), -2.0f, (float) -4 * (i % 3));
-            RENDERER.rotate(angle, 0.0f, 1.0f, 0.0f);
-            RENDERER.scale(0.04f, 0.04f, 0.04f);
+            RENDERER.translate((float)4 * ((i / 3) - 1.5f) + 10.0f, 0.0f, (float) 4 * (i % 3) + 10.f);
+            //RENDERER.rotate(angle, 0.0f, 1.0f, 0.0f);
+            RENDERER.scale(0.02f, 0.02f, 0.02f);
             models[i]->draw(RENDERER);
             RENDERER.pop_matrix();
-        }
+        }*/
 
         RENDERER.end_frame();
 

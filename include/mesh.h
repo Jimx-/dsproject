@@ -24,6 +24,8 @@ struct Vertex{
     int bone_ids[NUM_BONES_PER_VERTEX];
     float bone_weights[NUM_BONES_PER_VERTEX];
 
+    float tangent[3];
+
     Vertex() {
         for (int i = 0; i < NUM_BONES_PER_VERTEX; i++) {
             bone_weights[i] = 0.0f;
@@ -87,9 +89,6 @@ public:
 
     aiAnimation* get_animation(InternString name) const;
     std::vector<Mesh>& get_meshes() { return meshes; }
-
-    void start_animation(InternString name);
-    void update_animation(float dt);
 private:
     std::vector<Mesh> meshes;
     std::vector<PMaterial> materials;
