@@ -37,6 +37,7 @@ public:
     static const InternString DEPTH_MAP_SHADER;
 	static const InternString HDR_BLEND_SHADER;
 	static const InternString GAUSSIAN_BLUR_SHADER;
+	static const InternString BILLBOARD_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
     static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
@@ -94,6 +95,7 @@ private:
     glm::mat4 view;
     glm::mat4 projection;
     std::stack<glm::mat4> xforms;
+	glm::vec3 view_pos;
 
     std::vector<PRenderable> render_queue;
 

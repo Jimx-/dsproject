@@ -14,8 +14,10 @@ const InternString Renderer::SSAO_BLUR_SHADER = "SSAO_blur_shader";
 const InternString Renderer::DEPTH_MAP_SHADER = "depth_map_shader";
 const InternString Renderer::HDR_BLEND_SHADER = "HDR_blend_shader";
 const InternString Renderer::GAUSSIAN_BLUR_SHADER = "gaussian_blur_shader";
+const InternString Renderer::BILLBOARD_SHADER = "billboard_shader";
 
 const InternString ShaderProgram::MVP = "uMVP";
+const InternString ShaderProgram::VP = "uVP";
 const InternString ShaderProgram::MODEL = "uModel";
 const InternString ShaderProgram::VIEW = "uView";
 const InternString ShaderProgram::VIEW_POS = "uViewPos";

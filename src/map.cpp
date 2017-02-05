@@ -4,6 +4,7 @@
 
 #include "map.h"
 #include "character_manager.h"
+#include "particle_system.h"
 
 #include <glm/gtc/type_ptr.hpp>
 #include <random>
@@ -34,7 +35,9 @@ void Map::setup_mesh()
         for (GLuint j = 0; j < height; j++) {
 
             char tile = generator.getTile(i, j);
-            if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn || tile == MapGenerator::Traps) {
+            if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn || tile == MapGenerator::Traps || 
+				tile == MapGenerator::Torch || tile == MapGenerator::Treasure_traps || tile == MapGenerator::ClosedDoor ||
+				tile == MapGenerator::OpenDoor) {
                 for (int h = 0; h < 2; h++) {
                     int base = vertices.size();
                     for (int x = 0; x < 2; x++) {
@@ -72,6 +75,12 @@ void Map::setup_mesh()
                     CHARACTER_MANAGER.spawn<SkeletonCharacter>(glm::vec3((float)i, 0.0f, (float)j));
 				} else if (tile == MapGenerator::Tile::Traps) {
 					CHARACTER_MANAGER.spawn_item<TrapItem>(glm::vec3((float)i, 0.0f, (float)j));
+				} else if (tile == MapGenerator::Tile::Torch) {
+					RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.57f, 0.16f), 0.1f, 0.05f);
+					CHARACTER_MANAGER.spawn_item<TorchItem>(glm::vec3((float)i, 0.0f, (float)j));
+					PARTICLE_SYSTEM.spawn_particle<FlameParticle>(glm::vec3{ (i + 0.5f) * TILE_SIZE, 1.15f, (j + 0.5f) * TILE_SIZE });
+				} else if (tile == MapGenerator::Tile::Treasure_traps) {
+					CHARACTER_MANAGER.spawn_item<ChestTrapItem>(glm::vec3((float)i, 0.0f, (float)j));
 				}
             } else if (tile == MapGenerator::Tile::Wall) {
                 float start_x = i * TILE_SIZE;
@@ -133,9 +142,7 @@ void Map::setup_mesh()
                     start_x = x2;
                     start_z = z2;
                 }
-            } else if (tile == MapGenerator::Tile::Torch) {
-                RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.57f, 0.16f), 0.1f, 0.05f);
-			}
+            }
         }
     }
 

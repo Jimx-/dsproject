@@ -84,7 +84,7 @@ class Model : public Renderable
 public:
     Model(const char* path);
 
-    void load_animation(InternString name, std::string path);
+    void load_animation(InternString name, std::string path, int idx = 0);
     void draw(Renderer& renderer);
 
     aiAnimation* get_animation(InternString name) const;

@@ -3,10 +3,12 @@
 #include "log_manager.h"
 #include "animation_manager.h"
 #include "character_manager.h"
+#include "particle_system.h"
 #include "renderer.h"
 #include "animation_model.h"
 #include "exception.h"
 #include "map.h"
+#include "particle.h"
 
 #include "characters.h"
 
@@ -85,6 +87,7 @@ void setup_context()
 
     new AnimationManager();
     new CharacterManager();
+	new ParticleSystem();
 }
 
 Camera camera(10.0f, 3.0f, 10.0f, 0.0f, 1.0f, 0.0f);
@@ -153,6 +156,7 @@ int main()
         float dt = (float) current_time - (float) last_time;
         last_time = current_time;
         ANIMATION_MANAGER.update(dt);
+		PARTICLE_SYSTEM.update(dt);
 
 
         if (dt > 0) {
@@ -170,6 +174,7 @@ int main()
         //map.draw(RENDERER);
         RENDERER.enqueue_renderable(map);
         CHARACTER_MANAGER.submit(RENDERER);
+		PARTICLE_SYSTEM.submit(RENDERER);
 
         /*for (int i = 0; i < N; i++) {
             RENDERER.push_matrix();

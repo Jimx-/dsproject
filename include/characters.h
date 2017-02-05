@@ -41,4 +41,24 @@ public:
 	TrapItem(glm::vec3 pos);
 };
 
+class ChestTrapItem : public BaseCharacter {
+private:
+	static PModel _prepare_model();
+	virtual AnimationModel* get_model() const override;
+	virtual void intrinsic_transform(Renderer& renderer);
+
+public:
+	ChestTrapItem(glm::vec3 pos);
+};
+
+class TorchItem : public BaseCharacter {
+private:
+	static PModel _prepare_model();
+	virtual AnimationModel* get_model() const override;
+	virtual void intrinsic_transform(Renderer& renderer);
+
+public:
+	TorchItem(glm::vec3 pos);
+};
+
 #endif

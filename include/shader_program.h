@@ -15,6 +15,7 @@ public:
     typedef InternString UniformID;
 
     static const InternString MVP;
+    static const InternString VP;
     static const InternString MODEL;
     static const InternString VIEW;
     static const InternString VIEW_POS;

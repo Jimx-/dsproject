@@ -68,7 +68,9 @@ SET(WEEABOO_SRCLIST
         src/random_utils.cpp
         src/camera.cpp
         src/characters.cpp
-        src/character_manager.cpp)
+        src/character_manager.cpp
+		src/particle.cpp
+		src/particle_system.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})

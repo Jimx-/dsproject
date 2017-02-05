@@ -21,8 +21,6 @@ const float Renderer::Z_FAR = 100.0f;
 const float Renderer::SHADOW_NEAR = 1.0f;
 const float Renderer::SHADOW_FAR = 25.0f;
 
-static glm::vec3 view_pos(20.0f, 10.0f, 20.0f);
-
 Renderer::Renderer()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -76,6 +74,11 @@ Renderer::Renderer()
 	shaders[GAUSSIAN_BLUR_SHADER] = gaussian_blur_shader;
 	use_shader(GAUSSIAN_BLUR_SHADER);
 	gaussian_blur_shader->uniform("uInput", 0);
+
+	PShaderProgram billboard_shader(new ShaderProgram("resources/shaders/billboard.vert", "resources/shaders/billboard.frag", "resources/shaders/billboard.geom"));
+	shaders[BILLBOARD_SHADER] = billboard_shader;
+	use_shader(BILLBOARD_SHADER);
+	billboard_shader->uniform("uTexture", 0);
 
     setup_gbuffer();
     setup_quad();
@@ -229,6 +232,13 @@ void Renderer::setup_HDR()
 	}
 	GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 	glDrawBuffers(2, attachments);
+
+	GLuint rbo_depth;
+    glGenRenderbuffers(1, &rbo_depth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, g_screen_width, g_screen_height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glGenFramebuffers(2, bloom_blur_fbo);
@@ -320,6 +330,7 @@ void Renderer::end_frame()
     update_mvp();
 
     for (int i = 0; i < render_queue.size(); i++) {
+		if (!render_queue[i]->is_opaque()) continue;
         render_queue[i]->draw(*this);
     }
 
@@ -357,11 +368,11 @@ void Renderer::enqueue_renderable(PRenderable renderable)
 
 void Renderer::update_camera(const Camera& camera)
 {
-    glm::vec3 cam_pos = camera.get_position();
+    view_pos = camera.get_position();
     int min_index = 0;
-    float min_dist = glm::distance(cam_pos, lights[0].position);
+    float min_dist = glm::distance(view_pos, lights[0].position);
     for (int i = 1; i < lights.size(); i++) {
-        float dist = glm::distance(cam_pos, lights[i].position);
+        float dist = glm::distance(view_pos, lights[i].position);
         if (dist < min_dist) {
             min_dist = dist;
             min_index = i;
@@ -425,7 +436,7 @@ void Renderer::render_lighting_pass()
     GLuint lighting_program = shaders[LIGHTING_PASS_SHADER]->get_program();
     for (GLuint i = 0; i < lights.size(); i++)
     {
-        glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].position").c_str()), 1, &lights[i].position[0]);
+		glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].position").c_str()), 1, &lights[i].position[0]);
         if (0) {
             glm::vec3 red = glm::vec3(1.0f, 0.0f, 0.0f);
             glUniform3fv(glGetUniformLocation(lighting_program, ("uLights[" + std::to_string(i) + "].color").c_str()),
@@ -444,6 +455,23 @@ void Renderer::render_lighting_pass()
     uniform(ShaderProgram::VIEW_POS, view_pos.x, view_pos.y, view_pos.z);
 
     render_quad();
+
+	/* blit depth buffer */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, hdr_fbo); 
+	glBlitFramebuffer(0, 0, g_screen_width, g_screen_height, 0, 0, g_screen_width, g_screen_height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+	/* forward shading pass */
+    use_shader(BILLBOARD_SHADER);
+	glm::mat4 vp = projection * view;
+	uniform(ShaderProgram::VP, 1, false, glm::value_ptr(vp));
+	uniform(ShaderProgram::VIEW, 1, false, glm::value_ptr(view));
+
+    for (int i = 0; i < render_queue.size(); i++) {
+		if (render_queue[i]->is_opaque()) continue;
+        render_queue[i]->draw(*this);
+    }
+
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -501,6 +529,7 @@ void Renderer::shadow_map_pass()
     uniform("uLightPos", lightPos[0], lightPos[1], lightPos[2]);
 
     for (int i = 0; i < render_queue.size(); i++) {
+		if (!render_queue[i]->is_opaque()) continue;
         render_queue[i]->draw(*this);
     }
 

@@ -232,7 +232,7 @@ void Model::draw(Renderer& renderer)
 
 void Model::load_model(std::string path) {
     Assimp::Importer* import = new Assimp::Importer();
-    const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenNormals);
 
     LOG.debug("Loading model '%s'", path.c_str());
     if(!scene){
@@ -243,27 +243,29 @@ void Model::load_model(std::string path) {
     this->process_node(scene->mRootNode, scene);
 }
 
-void Model::load_animation(InternString name, std::string path)
+void Model::load_animation(InternString name, std::string path, int idx)
 {
     Assimp::Importer* import = new Assimp::Importer();
     const aiScene* scene = import->ReadFile(path,aiProcess_Triangulate | aiProcess_FlipUVs);
+	scene = import->ApplyPostProcessing(aiProcess_CalcTangentSpace);
 
     LOG.debug("Loading animation '%s'", path.c_str());
     if(!scene){
         THROW_EXCEPT(E_RESOURCE_ERROR, "Model::load_animation()", "ASSIMP::" + string(import->GetErrorString()));
     }
 
-    if (scene->mNumAnimations != 1) {
+    if (scene->mNumAnimations <= idx) {
         THROW_EXCEPT(E_RESOURCE_ERROR, "Model::load_animation()", "Animation '" + path + "' contains wrong number of animation nodes");
     }
 
-    animations[name] = scene->mAnimations[0];
+    animations[name] = scene->mAnimations[idx];
 }
 
 void Model::process_node(aiNode* node, const aiScene* scene){
 
     for(GLuint i = 0; i < node->mNumMeshes; i++){
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+		if (strcmp(mesh->mName.data, "Spiketrap") == 0) continue;	/* XXX: workaround */
         this->meshes.push_back(this->process_mesh(mesh, scene));
     }
 
@@ -277,34 +279,34 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
 
-    for(GLuint i = 0; i < mesh->mNumVertices; i++){
-        Vertex vertex;
+
+	for (GLuint i = 0; i < mesh->mNumVertices; i++) {
+		Vertex vertex;
 #define SET_VERTEX(n, j) vertex.position[j] = mesh->mVertices[i].n
-        SET_VERTEX(x, 0);
-        SET_VERTEX(y, 1);
-        SET_VERTEX(z, 2);
+		SET_VERTEX(x, 0);
+		SET_VERTEX(y, 1);
+		SET_VERTEX(z, 2);
 #define SET_NORMAL(n, j) vertex.normal[j] = mesh->mNormals[i].n
-        SET_NORMAL(x, 0);
-        SET_NORMAL(y, 1);
-        SET_NORMAL(z, 2);
+		SET_NORMAL(x, 0);
+		SET_NORMAL(y, 1);
+		SET_NORMAL(z, 2);
 #define SET_TANGENT(n, j) vertex.tangent[j] = mesh->mTangents[i].n
-        SET_TANGENT(x, 0);
-        SET_TANGENT(y, 1);
-        SET_TANGENT(z, 2);
+		SET_TANGENT(x, 0);
+		SET_TANGENT(y, 1);
+		SET_TANGENT(z, 2);
 
-        vertex.tex_coord[0] = mesh->mTextureCoords[0][i].x;
-        vertex.tex_coord[1] = mesh->mTextureCoords[0][i].y;
+		vertex.tex_coord[0] = mesh->mTextureCoords[0][i].x;
+		vertex.tex_coord[1] = mesh->mTextureCoords[0][i].y;
 
-        vertices.push_back(vertex);
-    }
+		vertices.push_back(vertex);
+	}
 
-    for (GLuint i = 0; i < mesh->mNumFaces; i++) {
-        for (GLuint j = 0; j < mesh->mFaces[i].mNumIndices; j++) {
-            assert(mesh->mFaces[i].mNumIndices == 3);
-            indices.push_back(mesh->mFaces[i].mIndices[j]);
-        }
-    }
-
+	for (GLuint i = 0; i < mesh->mNumFaces; i++) {
+		for (GLuint j = 0; j < mesh->mFaces[i].mNumIndices; j++) {
+			assert(mesh->mFaces[i].mNumIndices == 3);
+			indices.push_back(mesh->mFaces[i].mIndices[j]);
+		}
+	}
 
     PMaterial material;
     if (mesh->mMaterialIndex < materials.size()) {
@@ -317,7 +319,7 @@ Mesh Model::process_mesh(aiMesh* mesh, const aiScene* scene){
 	/* default bone data */
 	if (!mesh->mNumBones) {
 		for (GLuint i = 0; i < mesh->mNumVertices; i++) {
-			vertices[i].add_bone_data(0, 1.0f);
+			vertices[i].add_bone_data(1, 1.0f);
 		}
 	} else {
 		for (unsigned int i = 0; i < mesh->mNumBones; i++) {
@@ -361,14 +363,29 @@ void Model::process_materials(const aiScene* scene)
         float roughness = 0.8f;
         float metallic = 0.0f;
 
+		string normal_map = "flat_normal_map.png";
+		string diffuse_map = "";
+
         /* XXX: workaround: the model assets have quite broken material info, so specify them here manually */
         aiString mat_name;
         if (AI_SUCCESS == a_material->Get(AI_MATKEY_NAME, mat_name)) {
 			LOG.info("%s", mat_name.data);
-            if (string(mat_name.data).find("equipment", 0) != string::npos) {
+			string mat_str(mat_name.data);
+            if (mat_str.find("equipment", 0) != string::npos) {	/* skeleton's equipment */
                 metallic = 0.8f;
                 roughness = 0.5f;
-            }
+			} else if (mat_str.find("Spike", 0) != string::npos) { /* trap's spike */
+				metallic = 0.8f;
+				roughness = 0.3f;
+				normal_map = "Spiketrap_normal_map.tga";
+			} else if (mat_str.find("Body", 0) != string::npos) { /* trap's body */
+				metallic = 0.3f;
+				roughness = 0.7f;
+				normal_map = "Spiketrap_normal_map.tga";
+			} else if (mat_str == "lambert6") {	/* treasure */
+				metallic = 0.8f;
+				roughness = 0.3f;
+			}
         }
 
         if (a_material->GetTextureCount(aiTextureType_DIFFUSE) == 0) {
@@ -376,18 +393,29 @@ void Model::process_materials(const aiScene* scene)
             continue;
         }
 
-        aiString path;
-        if (a_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) != AI_SUCCESS) {
-            materials[i] = nullptr;
-            continue;
+		if (diffuse_map == "") {
+			aiString path;
+			if (a_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) != AI_SUCCESS) {
+				materials[i] = nullptr;
+				continue;
+			}
+
+			diffuse_map = path.data;
+			int cur = diffuse_map.length() - 1;
+			while (cur > 0 && diffuse_map[cur - 1] != '/' && diffuse_map[cur - 1] != '\\') cur--;
+			diffuse_map = diffuse_map.substr(cur, diffuse_map.length() - cur);
+		}
+
+		aiString path;
+        if (a_material->GetTexture(aiTextureType_NORMALS, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
+			normal_map = path.data;
+			int cur = normal_map.length() - 1;
+			while (cur > 0 && normal_map[cur-1] != '/' && normal_map[cur-1] != '\\') cur--;
+			normal_map = normal_map.substr(cur, normal_map.length() - cur);
+			LOG.info("NORMAL: %s", normal_map.c_str());
         }
 
-        string fullpath = path.data;
-        int cur = fullpath.length() - 1;
-        while (cur > 0 && fullpath[cur-1] != '/' && fullpath[cur-1] != '\\') cur--;
-        fullpath = fullpath.substr(cur, fullpath.length() - cur);
-
-        PMaterial material(new Material(roughness, metallic, fullpath));
+		PMaterial material(new Material(roughness, metallic, diffuse_map, normal_map));
         materials[i] = material;
     }
 }
