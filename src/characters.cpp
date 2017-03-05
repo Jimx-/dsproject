@@ -122,3 +122,27 @@ void TorchItem::intrinsic_transform(Renderer& renderer)
 	renderer.translate(0.5f * Map::TILE_SIZE, 0.0f, 0.5f * Map::TILE_SIZE);
 	renderer.scale(0.18f, 0.18f, 0.18f);
 }
+
+BarrelItem::BarrelItem(glm::vec3 pos) : BaseCharacter(pos)
+{
+	init_model();
+}
+
+PModel BarrelItem::_prepare_model()
+{
+	static PModel ourModel(new Model("resources/models/Barrel1.FBX"));
+	return ourModel;
+}
+
+AnimationModel* BarrelItem::get_model() const
+{
+	return new AnimationModel(_prepare_model());
+}
+
+void BarrelItem::intrinsic_transform(Renderer& renderer)
+{
+	renderer.translate(0.5f * Map::TILE_SIZE, 0.0f, 0.5f * Map::TILE_SIZE);
+	renderer.rotate(glm::radians(-90.0f), 1.0f, 0.0f, 0.0f);
+	renderer.scale(0.006f, 0.006f, 0.006f);
+}
+

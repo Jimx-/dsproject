@@ -5,6 +5,7 @@
 #include "map.h"
 #include "character_manager.h"
 #include "particle_system.h"
+#include "random_utils.h"
 
 #include <glm/gtc/type_ptr.hpp>
 #include <random>
@@ -81,6 +82,16 @@ void Map::setup_mesh()
 					PARTICLE_SYSTEM.spawn_particle<FlameParticle>(glm::vec3{ (i + 0.5f) * TILE_SIZE, 1.15f, (j + 0.5f) * TILE_SIZE });
 				} else if (tile == MapGenerator::Tile::Treasure_traps) {
 					CHARACTER_MANAGER.spawn_item<ChestTrapItem>(glm::vec3((float)i, 0.0f, (float)j));
+				} else if (tile == MapGenerator::Tile::Floor) {
+					if (generator.getTile(i + 1, j) == MapGenerator::Wall ||
+						generator.getTile(i - 1, j) == MapGenerator::Wall ||
+						generator.getTile(i, j - 1) == MapGenerator::Wall ||
+						generator.getTile(i, j + 1) == MapGenerator::Wall) {
+						float prob = RandomUtils::random_int(0, 1000) / 1000.0f;
+						if (prob < 0.1f) {
+							CHARACTER_MANAGER.spawn_item<BarrelItem>(glm::vec3((float)i, 0.0f, (float)j));
+						}
+					}
 				}
             } else if (tile == MapGenerator::Tile::Wall) {
                 float start_x = i * TILE_SIZE;
