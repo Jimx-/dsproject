@@ -1,4 +1,10 @@
 {
+  "general": {
+    "map_width": 30,
+    "map_height": 30,
+    "difficulty": "easy"
+  },
+
   "graphics": {
     "video_mode": "1366x768",
     "fullscreen": "false",

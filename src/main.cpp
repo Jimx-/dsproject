@@ -9,6 +9,7 @@
 #include "exception.h"
 #include "map.h"
 #include "particle.h"
+#include "simulation.h"
 
 #include "characters.h"
 
@@ -27,7 +28,22 @@ void load_config()
     conf.load(config_file);
 
     std::shared_ptr<Json::Value> root = conf.get_root();
+    Json::Value general_config = root->get("general", Json::Value::null);
     Json::Value graphics_config = root->get("graphics", Json::Value::null);
+
+	/* general */
+	if (!general_config.isNull()) {
+		string difficulty = general_config.get("difficulty", "normal").asString();
+		if (difficulty == "easy") g_difficulty = MapGenerator::Difficulty::Easy;
+		else if (difficulty == "normal") g_difficulty = MapGenerator::Difficulty::Normal;
+		else if (difficulty == "hard") g_difficulty = MapGenerator::Difficulty::Difficult;
+        else THROW_EXCEPT(E_INVALID_PARAM, "load_config()", "Bad difficlty argument '" + difficulty + "'");
+
+		g_map_width = general_config.get("map_width", "0").asInt();
+		g_map_height = general_config.get("map_height", "0").asInt();
+		if (g_map_width <= 0 || g_map_height <= 0)
+			THROW_EXCEPT(E_INVALID_PARAM, "load_config()", "Bad map size argument");
+	}
 
     /* graphics */
     if (!graphics_config.isNull()) {
@@ -86,11 +102,11 @@ void setup_context()
     RENDERER.set_viewport(g_screen_width, g_screen_height);
 
     new AnimationManager();
+    new Simulation();
     new CharacterManager();
 	new ParticleSystem();
 }
 
-Camera camera(10.0f, 3.0f, 10.0f, 0.0f, 1.0f, 0.0f);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     Camera::Direction dir;
@@ -112,18 +128,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		move = true;
     }
 	if (action != GLFW_RELEASE) {
-		if (move) camera.processkeyboard(dir, 0.1f);
-		else if (key == GLFW_KEY_ESCAPE) {
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
-	}
+        if (move) {
+            CHARACTER_MANAGER.main_char().set_linear_velocity(
+                CHARACTER_MANAGER.main_char().get_camera().get_linear_velocity(dir, 3.0f)
+            );
+        }
+
+        if (key == GLFW_KEY_ESCAPE) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        } else if (key == GLFW_KEY_SPACE) {
+            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+            if (pos[1] < 1.26f) {
+                CHARACTER_MANAGER.main_char().apply_impulse({0.0f, 4.0f, 0.0f});
+            }
+        }
+	} else {
+        if (move) CHARACTER_MANAGER.main_char().set_linear_velocity({0.0f, 0.0f, 0.0f});
+    }
 
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
     static float last_x, last_y;
-    camera.processmouse(xpos - last_x, -(ypos - last_y), true);
+    CHARACTER_MANAGER.main_char().get_camera().processmouse(xpos - last_x, -(ypos - last_y), true);
     last_x = xpos;
     last_y = ypos;
 }
@@ -134,17 +162,15 @@ int main()
     setup_context();
     LOG.info("Starting game...");
 
-    PRenderable map(new Map(30, 30));
+	g_map = new Map(g_map_width, g_map_height);
+    PRenderable map(g_map);
 
-    float angle = -90.0f;
     double last_time = glfwGetTime();
     double current_time;
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
-	/*for (int i = 0; i < 32; i++) {
-		RENDERER.add_light(glm::vec3((float)4 * ((i / 3) - 1.5f), 1.0f, (float)4 * (i % 3) + 0.3f), glm::vec3(1.0f, 0.8f, 0.5f), 0.4f, 0.5f);
-	} */
+
     // Game loop
 	int step = 0;
     while (!glfwWindowShouldClose(window))
@@ -157,33 +183,22 @@ int main()
         last_time = current_time;
         ANIMATION_MANAGER.update(dt);
 		PARTICLE_SYSTEM.update(dt);
-
+        SIMULATION.update(dt);
+		CHARACTER_MANAGER.update(dt);
 
         if (dt > 0) {
             char title[100];
-            auto pos = camera.get_position();
-            sprintf(title, "Weeaboo [fps: %d, X = %f, Z = %f]", (int) (1 / dt), pos[0], pos[2]);
+            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+            sprintf(title, "Weeaboo [fps: %d, X = %f, Y = %f, Z = %f]", (int) (1 / dt), pos[0], pos[1], pos[2]);
             glfwSetWindowTitle(window, title);
         }
 
-        angle += 0.1f;
-        //camera.set_yaw(angle);
         RENDERER.begin_frame();
-        RENDERER.update_camera(camera);
+        RENDERER.update_camera(CHARACTER_MANAGER.main_char().get_camera());
 
-        //map.draw(RENDERER);
         RENDERER.enqueue_renderable(map);
         CHARACTER_MANAGER.submit(RENDERER);
 		PARTICLE_SYSTEM.submit(RENDERER);
-
-        /*for (int i = 0; i < N; i++) {
-            RENDERER.push_matrix();
-            RENDERER.translate((float)4 * ((i / 3) - 1.5f) + 10.0f, 0.0f, (float) 4 * (i % 3) + 10.f);
-            //RENDERER.rotate(angle, 0.0f, 1.0f, 0.0f);
-            RENDERER.scale(0.02f, 0.02f, 0.02f);
-            models[i]->draw(RENDERER);
-            RENDERER.pop_matrix();
-        }*/
 
         RENDERER.end_frame();
 
@@ -194,4 +209,3 @@ int main()
     glfwTerminate();
     return 0;
 }
-

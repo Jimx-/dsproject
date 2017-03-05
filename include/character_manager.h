@@ -9,6 +9,8 @@
 
 class CharacterManager : public Singleton<CharacterManager> {
 public:
+	CharacterManager();
+
     template <typename T, typename ... Args>
     typename std::enable_if<std::is_base_of<BaseCharacter, typename std::decay<T>::type>::value>::type spawn(Args&&... args)
     {
@@ -22,8 +24,13 @@ public:
 	}
 
     void submit(Renderer& renderer) const;
+	void update(float dt);
+
+	MainCharacter& main_char() { return *main_character; }
 
 private:
+	std::unique_ptr<MainCharacter> main_character;
+
     std::vector<PCharacter> chars;
 	std::vector<PCharacter> items;
 };

@@ -7,6 +7,7 @@
 
 #include "json/json.h"
 #include "string_utils.h"
+#include "map.h"
 
 #include <memory>
 
@@ -21,6 +22,11 @@ public:
 private:
     std::shared_ptr<Json::Value> root;
 };
+
+extern Map* g_map;
+extern int g_map_width;
+extern int g_map_height;
+extern MapGenerator::Difficulty g_difficulty;
 
 extern int g_screen_width;
 extern int g_screen_height;

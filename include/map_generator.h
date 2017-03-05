@@ -24,6 +24,7 @@ public:
         Key         = 'K',
         Treasure_traps ='X',
         Torch       = '*',
+        Player      = 'P',
         Spawn       = 'S',
     };
 

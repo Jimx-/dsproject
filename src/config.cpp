@@ -7,6 +7,11 @@
 
 #include <fstream>
 
+Map* g_map;
+int g_map_width;
+int g_map_height;
+MapGenerator::Difficulty g_difficulty;
+
 int g_screen_width;
 int g_screen_height;
 bool g_fullscreen;
