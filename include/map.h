@@ -8,6 +8,7 @@
 #include "mesh.h"
 #include "map_generator.h"
 #include <memory>
+#include <btBulletDynamicsCommon.h>
 
 class Map : public Renderable {
 public:
@@ -21,6 +22,8 @@ private:
     int width, height;
     std::unique_ptr<Mesh> map_mesh;
     MapGenerator generator;
+    std::unique_ptr<btTriangleMesh> rigid_mesh;
+    std::unique_ptr<btRigidBody> rigid_body;
 
     void setup_mesh();
 };

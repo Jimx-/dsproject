@@ -56,6 +56,7 @@ void MapGenerator::generate(int maxFeatures, MapGenerator::Difficulty h)
         }
     }
 
+    placeObject(Player);
     for(int i = 0; i < h/3; i++)
     {
         if (!placeObject(Traps)) {

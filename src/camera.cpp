@@ -49,6 +49,31 @@ void Camera::processkeyboard(Direction udirection, GLfloat delta_time)
     update_camera_vectors();
 }
 
+glm::vec3 Camera::get_linear_velocity(Direction udirection, GLfloat delta_time)
+{
+    GLfloat velocity = delta_time * movement_speed;
+    glm::vec3 result;
+    switch (udirection)
+    {
+    case FORWARD:
+        result = this->front * velocity;
+        break;
+    case BACK:
+        result = -this->front * velocity;
+        break;
+    case RIGHT:
+        result = -this->right * velocity;
+        break;
+    case LEFT:
+        result = this->right * velocity;
+        break;
+    default:
+        break;
+    }
+    result[1] = 0.0f;
+    return result;
+}
+
 void Camera::processmouse(GLfloat x_offset, GLfloat y_offset, GLboolean over_pitch)
 {
     x_offset *= mouse_sensitivity;

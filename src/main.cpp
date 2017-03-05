@@ -9,6 +9,7 @@
 #include "exception.h"
 #include "map.h"
 #include "particle.h"
+#include "simulation.h"
 
 #include "characters.h"
 
@@ -86,11 +87,11 @@ void setup_context()
     RENDERER.set_viewport(g_screen_width, g_screen_height);
 
     new AnimationManager();
+    new Simulation();
     new CharacterManager();
 	new ParticleSystem();
 }
 
-Camera camera(10.0f, 3.0f, 10.0f, 0.0f, 1.0f, 0.0f);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     Camera::Direction dir;
@@ -112,18 +113,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		move = true;
     }
 	if (action != GLFW_RELEASE) {
-		if (move) camera.processkeyboard(dir, 0.1f);
-		else if (key == GLFW_KEY_ESCAPE) {
-			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
-	}
+        if (move) {
+            CHARACTER_MANAGER.main_char().set_linear_velocity(
+                CHARACTER_MANAGER.main_char().get_camera().get_linear_velocity(dir, 3.0f)
+            );
+        }
+
+        if (key == GLFW_KEY_ESCAPE) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        } else if (key == GLFW_KEY_SPACE) {
+            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+            if (pos[1] < 1.26f) {
+                CHARACTER_MANAGER.main_char().apply_impulse({0.0f, 4.0f, 0.0f});
+            }
+        }
+	} else {
+        if (move) CHARACTER_MANAGER.main_char().set_linear_velocity({0.0f, 0.0f, 0.0f});
+    }
 
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
     static float last_x, last_y;
-    camera.processmouse(xpos - last_x, -(ypos - last_y), true);
+    CHARACTER_MANAGER.main_char().get_camera().processmouse(xpos - last_x, -(ypos - last_y), true);
     last_x = xpos;
     last_y = ypos;
 }
@@ -134,7 +147,7 @@ int main()
     setup_context();
     LOG.info("Starting game...");
 
-    PRenderable map(new Map(30, 30));
+    PRenderable map(new Map(50, 50));
 
     float angle = -90.0f;
     double last_time = glfwGetTime();
@@ -157,19 +170,19 @@ int main()
         last_time = current_time;
         ANIMATION_MANAGER.update(dt);
 		PARTICLE_SYSTEM.update(dt);
-
+        SIMULATION.update(dt);
 
         if (dt > 0) {
             char title[100];
-            auto pos = camera.get_position();
-            sprintf(title, "Weeaboo [fps: %d, X = %f, Z = %f]", (int) (1 / dt), pos[0], pos[2]);
+            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+            sprintf(title, "Weeaboo [fps: %d, X = %f, Y = %f, Z = %f]", (int) (1 / dt), pos[0], pos[1], pos[2]);
             glfwSetWindowTitle(window, title);
         }
 
         angle += 0.1f;
         //camera.set_yaw(angle);
         RENDERER.begin_frame();
-        RENDERER.update_camera(camera);
+        RENDERER.update_camera(CHARACTER_MANAGER.main_char().get_camera());
 
         //map.draw(RENDERER);
         RENDERER.enqueue_renderable(map);

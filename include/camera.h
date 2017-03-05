@@ -36,7 +36,9 @@ public:
     void set_pitch(GLfloat pitch) { this->pitch = pitch; update_camera_vectors(); }
 
     glm::vec3 get_position() const { return position; }
+    void set_position(glm::vec3 pos) { this->position = pos; update_camera_vectors(); }
 
+    glm::vec3 get_linear_velocity(Direction udirection, GLfloat delta_time);
     // the change of position through keyboard
     void processkeyboard(Direction udirection, GLfloat delta_time);
 

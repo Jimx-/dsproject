@@ -17,12 +17,20 @@ OPTION(ASSIMP_BUILD_SAMPLES OFF)
 OPTION(ASSIMP_BUILD_TESTS OFF)
 ADD_SUBDIRECTORY(${TOPDIR}/ext/assimp)
 
+OPTION(BUILD_BULLET2_DEMOS OFF)
+OPTION(BUILD_CPU_DEMOS OFF)
+OPTION(BUILD_EXTRAS OFF)
+OPTION(BUILD_OPENGL3_DEMOS OFF)
+OPTION(BUILD_UNIT_TESTS OFF)
+ADD_SUBDIRECTORY(${TOPDIR}/ext/bullet)
+
 EXECUTE_PROCESS(COMMAND python amalgamate.py WORKING_DIRECTORY ${TOPDIR}/ext/jsoncpp)
 
 INCLUDE_DIRECTORIES(${TOPDIR}/include
         ${TOPDIR}/ext/assimp/include
         ${TOPDIR}/ext/glad/include
         ${TOPDIR}/ext/glfw/include
+        ${TOPDIR}/ext/bullet/src
         ${TOPDIR}/ext/glm
         ${TOPDIR}/ext/stb
         ${TOPDIR}/ext/jsoncpp/dist)
@@ -70,10 +78,12 @@ SET(WEEABOO_SRCLIST
         src/characters.cpp
         src/character_manager.cpp
 		src/particle.cpp
-		src/particle_system.cpp)
+		src/particle_system.cpp
+        src/simulation.cpp
+        src/motion_state.cpp)
 
 SET(LIBRARIES
-    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
+    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} BulletDynamics BulletCollision LinearMath)
 
 ADD_EXECUTABLE(weeaboo ${WEEABOO_SRCLIST} ${EXT_SRCLIST})
 TARGET_LINK_LIBRARIES(weeaboo ${LIBRARIES})

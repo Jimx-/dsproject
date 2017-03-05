@@ -17,3 +17,6 @@
 [submodule "ext/jsoncpp"]
 	path = ext/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "ext/bullet"]
+	path = ext/bullet
+	url = https://github.com/bulletphysics/bullet3.git

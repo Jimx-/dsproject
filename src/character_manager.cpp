@@ -3,6 +3,11 @@
 template<>
 CharacterManager* Singleton<CharacterManager>::singleton = nullptr;
 
+CharacterManager::CharacterManager()
+{
+    main_character.reset(new MainCharacter());
+}
+
 void CharacterManager::submit(Renderer& renderer) const
 {
     for (auto& p : chars) {
