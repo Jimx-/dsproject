@@ -26,7 +26,22 @@ void load_config()
     conf.load(config_file);
 
     std::shared_ptr<Json::Value> root = conf.get_root();
+    Json::Value general_config = root->get("general", Json::Value::null);
     Json::Value graphics_config = root->get("graphics", Json::Value::null);
+
+	/* general */
+	if (!general_config.isNull()) {
+		string difficulty = general_config.get("difficulty", "normal").asString();
+		if (difficulty == "easy") g_difficulty = MapGenerator::Difficulty::Easy;
+		else if (difficulty == "normal") g_difficulty = MapGenerator::Difficulty::Normal;
+		else if (difficulty == "hard") g_difficulty = MapGenerator::Difficulty::Difficult;
+        else THROW_EXCEPT(E_INVALID_PARAM, "load_config()", "Bad difficlty argument '" + difficulty + "'");
+
+		g_map_width = general_config.get("map_width", "0").asInt();
+		g_map_height = general_config.get("map_height", "0").asInt();
+		if (g_map_width <= 0 || g_map_height <= 0)
+			THROW_EXCEPT(E_INVALID_PARAM, "load_config()", "Bad map size argument");
+	}
 
     /* graphics */
     if (!graphics_config.isNull()) {
@@ -143,23 +158,36 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     last_y = ypos;
 }
 
+void show_stat(float dt)
+{
+    static std::shared_ptr<TextOverlay> text(new TextOverlay("", 0.0f, 0.0f, {1.0f, 1.0f, 1.0f}, 0.4));
+    static char stats[1000];
+
+    auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+    sprintf(stats, "fps: %d, x = %f, y = %f, z = %f", (int) (1 / dt), pos[0], pos[1], pos[2]);
+
+    text->set_text(stats);
+    text->set_y(g_screen_height - 20);
+
+    RENDERER.enqueue_overlay(text);
+}
+
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
     setup_context();
     LOG.info("Starting game...");
-    POverlay text(new TextOverlay("Hello world", 100, 100));
-    PRenderable map(new Map(50, 50));
 
-    float angle = -90.0f;
+	g_map = new Map(g_map_width, g_map_height);
+    PRenderable map(g_map);
+
     double last_time = glfwGetTime();
     double current_time;
+    glfwSetWindowTitle(window, "Weeaboo");
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
-	/*for (int i = 0; i < 32; i++) {
-		RENDERER.add_light(glm::vec3((float)4 * ((i / 3) - 1.5f), 1.0f, (float)4 * (i % 3) + 0.3f), glm::vec3(1.0f, 0.8f, 0.5f), 0.4f, 0.5f);
-	} */
+
     // Game loop
 	int step = 0;
     while (!glfwWindowShouldClose(window))
@@ -173,33 +201,19 @@ int main()
         ANIMATION_MANAGER.update(dt);
 		PARTICLE_SYSTEM.update(dt);
         SIMULATION.update(dt);
+		CHARACTER_MANAGER.update(dt);
 
-        if (dt > 0) {
-            char title[100];
-            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
-            sprintf(title, "Weeaboo [fps: %d, X = %f, Y = %f, Z = %f]", (int) (1 / dt), pos[0], pos[1], pos[2]);
-            glfwSetWindowTitle(window, title);
-        }
 
-        angle += 0.1f;
-        //camera.set_yaw(angle);
         RENDERER.begin_frame();
         RENDERER.update_camera(CHARACTER_MANAGER.main_char().get_camera());
 
-        //map.draw(RENDERER);
+        if (dt > 0) {
+            show_stat(dt);
+        }
+
         RENDERER.enqueue_renderable(map);
-        RENDERER.enqueue_overlay(text);
         CHARACTER_MANAGER.submit(RENDERER);
 		PARTICLE_SYSTEM.submit(RENDERER);
-
-        /*for (int i = 0; i < N; i++) {
-            RENDERER.push_matrix();
-            RENDERER.translate((float)4 * ((i / 3) - 1.5f) + 10.0f, 0.0f, (float) 4 * (i % 3) + 10.f);
-            //RENDERER.rotate(angle, 0.0f, 1.0f, 0.0f);
-            RENDERER.scale(0.02f, 0.02f, 0.02f);
-            models[i]->draw(RENDERER);
-            RENDERER.pop_matrix();
-        }*/
 
         RENDERER.end_frame();
 
@@ -210,4 +224,3 @@ int main()
     glfwTerminate();
     return 0;
 }
-

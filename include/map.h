@@ -16,8 +16,9 @@ public:
 
     void draw(Renderer& renderer);
     static const float TILE_SIZE;
-private:
 
+	char get_tile(int i, int j) { return generator.getTile(i, j); }
+private:
 
     int width, height;
     std::unique_ptr<Mesh> map_mesh;

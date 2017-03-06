@@ -384,15 +384,18 @@ void Model::process_materials(const aiScene* scene)
 			} else if (mat_str == "lambert6") {	/* treasure */
 				metallic = 0.8f;
 				roughness = 0.3f;
+			} else if (mat_str == "Barrel1") {
+				diffuse_map = "Barrel2_A.png";
+				normal_map = "Barrel2_N.png";
 			}
         }
 
-        if (a_material->GetTextureCount(aiTextureType_DIFFUSE) == 0) {
-            materials[i] = nullptr;
-            continue;
-        }
-
 		if (diffuse_map == "") {
+			if (a_material->GetTextureCount(aiTextureType_DIFFUSE) == 0) {
+				materials[i] = nullptr;
+				continue;
+			}
+
 			aiString path;
 			if (a_material->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) != AI_SUCCESS) {
 				materials[i] = nullptr;
@@ -426,4 +429,5 @@ aiAnimation* Model::get_animation(InternString name) const
     }
     return it->second;
 }
+
 

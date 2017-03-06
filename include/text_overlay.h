@@ -16,6 +16,10 @@ public:
     TextOverlay(const std::string& text, float x, float y, glm::vec3 color = {1.0f, 1.0f, 1.0f}, float scale = 1.0f);
     virtual void draw(Renderer& renderer) override;
 
+    void set_text(const std::string& text) { this->text = text; }
+    void set_x(float x) { this->x = x; }
+    void set_y(float y) { this->y = y; }
+
 private:
     std::string text;
     float x, y, scale;

@@ -11,7 +11,7 @@
 #include "log_manager.h"
 #include "exception.h"
 #include "random_utils.h"
-
+#include "character_manager.h"
 template <>
 Renderer* Singleton<Renderer>::singleton = nullptr;
 
@@ -20,6 +20,8 @@ const float Renderer::Z_NEAR = 0.1f;
 const float Renderer::Z_FAR = 100.0f;
 const float Renderer::SHADOW_NEAR = 1.0f;
 const float Renderer::SHADOW_FAR = 25.0f;
+
+const GLuint MINIMAP_SIZE = 8;
 
 Renderer::Renderer()
 {
@@ -85,11 +87,17 @@ Renderer::Renderer()
     use_shader(TEXT_OVERLAY_SHADER);
     text_shader->uniform("uText", 0);
 
+    PShaderProgram minimap_shader(new ShaderProgram("resources/shaders/minimap.vert", "resources/shaders/minimap.frag"));
+    shaders[MINIMAP_SHADER] = minimap_shader;
+    use_shader(MINIMAP_SHADER);
+    minimap_shader->uniform("uTexture", 0);
+
     setup_gbuffer();
     setup_quad();
     setup_SSAO();
 	setup_HDR();
     setup_shadow_map();
+    setup_minimap();
 }
 
 void Renderer::setup_gbuffer()
@@ -322,6 +330,7 @@ void Renderer::update_mvp()
 void Renderer::begin_frame()
 {
     render_queue.clear();
+    overlay_queue.clear();
 }
 
 void Renderer::end_frame()
@@ -584,6 +593,115 @@ void Renderer::post_process_pass()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Renderer::setup_minimap()
+{
+    glGenVertexArrays(1, &minimap_VAO);
+    glGenBuffers(1, &minimap_VBO);
+    glBindVertexArray(minimap_VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, minimap_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void Renderer::draw_minimap()
+{
+    GLfloat minimap_verts[24];
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glBindVertexArray(minimap_VAO);
+
+    auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+    int si = (int)(pos[0] / Map::TILE_SIZE), sj = (int)(pos[2] / Map::TILE_SIZE);
+
+    float radius = 0.15f;
+    float x_span = radius * 2 * g_screen_height / MINIMAP_SIZE;
+    float y_span = radius * 2 * g_screen_height / MINIMAP_SIZE;
+    uniform("uRadius", x_span * MINIMAP_SIZE / 2);
+
+    float centre_x = g_screen_width - 30 - x_span * MINIMAP_SIZE / 2;
+    float centre_y = g_screen_height - 30 - y_span * MINIMAP_SIZE / 2;
+    uniform("uCentre", centre_x, centre_y);
+
+    GLfloat yaw = CHARACTER_MANAGER.main_char().get_camera().get_yaw();
+    glm::mat4 proj = glm::ortho(0.0f, (float)g_screen_width, 0.0f, (float)g_screen_height);
+    glm::mat4 model =
+        glm::translate(glm::mat4(), {centre_x, centre_y, 0.0f}) *
+        glm::rotate(glm::mat4(), glm::radians(yaw + 90.0f), glm::vec3(0.f, 0.f, 1.f));
+    uniform("uModel", 1, false, glm::value_ptr(model));
+    uniform("uProjection", 1, false, glm::value_ptr(proj));
+
+    PMaterialTexture texture = MaterialTexture::create_texture("dungeon.png");
+    texture->bind(Renderer::DIFFUSE_TEXTURE_TARGET);
+
+    int hv = MINIMAP_SIZE / 2;
+    for (int i = -hv; i < hv; i++) {
+        for (int j = -hv; j < hv; j++) {
+            int index = 0;
+
+#define ADD_VERTEX(pos, texcoord) \
+    minimap_verts[index++] = pos[0]; \
+    minimap_verts[index++] = pos[1]; \
+    minimap_verts[index++] = texcoord[0]; \
+    minimap_verts[index++] = texcoord[1]; \
+
+            std::vector<glm::vec2> texcs{{2.0, 0}, {2.0, 0}, {2.0, 0}, {2.0, 0}};
+            int map_i = i + si, map_j = sj - j;
+            if (!(map_i < 0 || map_i >= g_map_width || map_j < 0 || map_j >= g_map_height)) {
+                char tile = g_map->get_tile(map_i, map_j);
+                if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn || tile == MapGenerator::Traps ||
+                    tile == MapGenerator::Torch || tile == MapGenerator::Treasure_traps || tile == MapGenerator::ClosedDoor ||
+                    tile == MapGenerator::OpenDoor || tile == MapGenerator::Player || tile == MapGenerator::Corridor ||
+                    tile == MapGenerator::Key) {
+                    texcs[0] = {0.0f, 0.0f};
+                    texcs[1] = {0.5f, 0.0f};
+                    texcs[2] = {0.0f, 0.5f};
+                    texcs[3] = {0.5f, 0.5f};
+                } else if (tile == MapGenerator::Tile::Wall) {
+                    texcs[0] = {0.5f, 0.0f};
+                    texcs[1] = {1.0f, 0.0f};
+                    texcs[2] = {0.5f, 0.5f};
+                    texcs[3] = {1.0f, 0.5f};
+                }
+            }
+
+
+#define GEN_POS(i, j)  (i) * x_span, (j) * y_span
+            glm::vec2 vertices[4] = {
+                { GEN_POS(i, j) },
+                { GEN_POS(i + 1, j) },
+                { GEN_POS(i, j + 1) },
+                { GEN_POS(i + 1, j + 1) },
+            };
+
+            ADD_VERTEX(vertices[0], texcs[0]);
+            ADD_VERTEX(vertices[1], texcs[1]);
+            ADD_VERTEX(vertices[2], texcs[2]);
+
+            ADD_VERTEX(vertices[1], texcs[1]);
+            ADD_VERTEX(vertices[3], texcs[3]);
+            ADD_VERTEX(vertices[2], texcs[2]);
+
+            glBindBuffer(GL_ARRAY_BUFFER, minimap_VBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(minimap_verts), minimap_verts);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+    }
+
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+}
+
 void Renderer::overlay_pass()
 {
     use_shader(TEXT_OVERLAY_SHADER);
@@ -594,5 +712,8 @@ void Renderer::overlay_pass()
         if (overlay_queue[i]->get_technique() != Overlay::Technique::TEXT) continue;
         overlay_queue[i]->draw(*this);
     }
+
+    use_shader(MINIMAP_SHADER);
+    draw_minimap();
 }
 

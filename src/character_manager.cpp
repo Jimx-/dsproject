@@ -17,3 +17,14 @@ void CharacterManager::submit(Renderer& renderer) const
 		renderer.enqueue_renderable(p);
 	}
 }
+
+void CharacterManager::update(float dt)
+{
+	main_character->update(dt);
+	for (auto& p : chars) {
+		p->update(dt);
+	}
+	for (auto& p : items) {
+		p->update(dt);
+	}
+}

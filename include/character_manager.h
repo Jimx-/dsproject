@@ -24,6 +24,7 @@ public:
 	}
 
     void submit(Renderer& renderer) const;
+	void update(float dt);
 
 	MainCharacter& main_char() { return *main_character; }
 

@@ -32,6 +32,7 @@ public:
     // return look_at matrix
     glm::mat4 get_view_matrix() const;
 
+    GLfloat get_yaw() const { return yaw; }
     void set_yaw(GLfloat yaw) { this->yaw = yaw; update_camera_vectors(); }
     void set_pitch(GLfloat pitch) { this->pitch = pitch; update_camera_vectors(); }
 

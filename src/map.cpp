@@ -3,8 +3,10 @@
 //
 
 #include "map.h"
+#include "config.h"
 #include "character_manager.h"
 #include "particle_system.h"
+#include "random_utils.h"
 #include "simulation.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -16,7 +18,7 @@ const float Map::TILE_SIZE = 1.5f;
 
 Map::Map(int width, int height) : width(width), height(height), generator(width, height)
 {
-    generator.generate(width, MapGenerator::Difficulty::Easy);
+    generator.generate(width, g_difficulty);
     generator.print();
     setup_mesh();
 }
@@ -38,7 +40,8 @@ void Map::setup_mesh()
             char tile = generator.getTile(i, j);
             if (tile == MapGenerator::Tile::Floor || tile == MapGenerator::Spawn || tile == MapGenerator::Traps || 
 				tile == MapGenerator::Torch || tile == MapGenerator::Treasure_traps || tile == MapGenerator::ClosedDoor ||
-				tile == MapGenerator::OpenDoor || tile == MapGenerator::Player) {
+				tile == MapGenerator::OpenDoor || tile == MapGenerator::Player || tile == MapGenerator::Corridor ||
+                tile == MapGenerator::Key) {
                 for (int h = 0; h < 2; h++) {
                     int base = vertices.size();
                     for (int x = 0; x < 2; x++) {
@@ -79,11 +82,21 @@ void Map::setup_mesh()
 				} else if (tile == MapGenerator::Tile::Traps) {
 					CHARACTER_MANAGER.spawn_item<TrapItem>(glm::vec3((float)i * TILE_SIZE, 0.0f, (float)j * TILE_SIZE));
 				} else if (tile == MapGenerator::Tile::Torch) {
-					RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.57f, 0.16f), 0.1f, 0.05f);
-					CHARACTER_MANAGER.spawn_item<TorchItem>(glm::vec3((float)i * TILE_SIZE, 0.0f, (float)j * TILE_SIZE));
+					RENDERER.add_light(glm::vec3((i + 0.5f) * TILE_SIZE, 1.0f, (j + 0.5f) * TILE_SIZE), glm::vec3(1.0f, 0.57f, 0.16f), 0.1f, 0.1f);
+					CHARACTER_MANAGER.spawn_item<TorchItem>(glm::vec3((i + 0.5f) * TILE_SIZE, 0.0f, (j + 0.5) * TILE_SIZE));
 					PARTICLE_SYSTEM.spawn_particle<FlameParticle>(glm::vec3{ (i + 0.5f) * TILE_SIZE, 1.15f, (j + 0.5f) * TILE_SIZE });
 				} else if (tile == MapGenerator::Tile::Treasure_traps) {
-					CHARACTER_MANAGER.spawn_item<ChestTrapItem>(glm::vec3((float)i * TILE_SIZE, 0.0f, (float)j * TILE_SIZE));
+					CHARACTER_MANAGER.spawn_item<ChestTrapItem>(glm::vec3((i - 0.5f) * TILE_SIZE, 0.0f, (j + 0.5f) * TILE_SIZE));
+				} else if (tile == MapGenerator::Tile::Floor) {
+					if (generator.getTile(i + 1, j) == MapGenerator::Wall ||
+						generator.getTile(i - 1, j) == MapGenerator::Wall ||
+						generator.getTile(i, j - 1) == MapGenerator::Wall ||
+						generator.getTile(i, j + 1) == MapGenerator::Wall) {
+						float prob = RandomUtils::random_int(0, 1000) / 1000.0f;
+						if (prob < 0.1f) {
+							CHARACTER_MANAGER.spawn_item<BarrelItem>(glm::vec3((i + 0.5f) * TILE_SIZE, 0.0f, (j + 0.5) * TILE_SIZE));
+						}
+					}
 				} else if (tile == MapGenerator::Tile::Player) {
                     CHARACTER_MANAGER.main_char().set_position(glm::vec3{ i * TILE_SIZE, 2.0f, j * TILE_SIZE });
                 }

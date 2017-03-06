@@ -41,6 +41,7 @@ public:
 	static const InternString GAUSSIAN_BLUR_SHADER;
 	static const InternString BILLBOARD_SHADER;
     static const InternString TEXT_OVERLAY_SHADER;
+    static const InternString MINIMAP_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
     static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
@@ -131,6 +132,9 @@ private:
 	GLuint bloom_blur_fbo[2];
 	GLuint bloom_blur_buffers[2];
 
+    GLuint minimap_VAO;
+    GLuint minimap_VBO;
+
     void setup_gbuffer();
     void update_mvp();
 
@@ -148,6 +152,8 @@ private:
 	void setup_HDR();
 	void post_process_pass();
 
+    void setup_minimap();
+    void draw_minimap();
     void overlay_pass();
 };
 
