@@ -11,6 +11,7 @@ int g_screen_width;
 int g_screen_height;
 bool g_fullscreen;
 int g_MSAA;
+std::string g_font;
 
 ConfigFile::ConfigFile() : root(nullptr)
 {

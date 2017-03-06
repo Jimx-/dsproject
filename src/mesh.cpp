@@ -369,7 +369,6 @@ void Model::process_materials(const aiScene* scene)
         /* XXX: workaround: the model assets have quite broken material info, so specify them here manually */
         aiString mat_name;
         if (AI_SUCCESS == a_material->Get(AI_MATKEY_NAME, mat_name)) {
-			LOG.info("%s", mat_name.data);
 			string mat_str(mat_name.data);
             if (mat_str.find("equipment", 0) != string::npos) {	/* skeleton's equipment */
                 metallic = 0.8f;
@@ -412,7 +411,6 @@ void Model::process_materials(const aiScene* scene)
 			int cur = normal_map.length() - 1;
 			while (cur > 0 && normal_map[cur-1] != '/' && normal_map[cur-1] != '\\') cur--;
 			normal_map = normal_map.substr(cur, normal_map.length() - cur);
-			LOG.info("NORMAL: %s", normal_map.c_str());
         }
 
 		PMaterial material(new Material(roughness, metallic, diffuse_map, normal_map));

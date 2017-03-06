@@ -4,12 +4,10 @@
 #include "animation_manager.h"
 #include "character_manager.h"
 #include "particle_system.h"
-#include "renderer.h"
-#include "animation_model.h"
 #include "exception.h"
 #include "map.h"
-#include "particle.h"
 #include "simulation.h"
+#include "text_overlay.h"
 
 #include "characters.h"
 
@@ -48,6 +46,8 @@ void load_config()
 		g_fullscreen = (fullscreen == "true");
 
 		g_MSAA = graphics_config.get("MSAA", "0").asInt();
+
+        g_font = graphics_config.get("font", "DejaVuSerif").asString();
     }
 }
 
@@ -90,6 +90,8 @@ void setup_context()
     new Simulation();
     new CharacterManager();
 	new ParticleSystem();
+
+    TextOverlay::setup_font(g_font);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -146,7 +148,7 @@ int main()
 {
     setup_context();
     LOG.info("Starting game...");
-
+    POverlay text(new TextOverlay("Hello world", 100, 100));
     PRenderable map(new Map(50, 50));
 
     float angle = -90.0f;
@@ -186,6 +188,7 @@ int main()
 
         //map.draw(RENDERER);
         RENDERER.enqueue_renderable(map);
+        RENDERER.enqueue_overlay(text);
         CHARACTER_MANAGER.submit(RENDERER);
 		PARTICLE_SYSTEM.submit(RENDERER);
 

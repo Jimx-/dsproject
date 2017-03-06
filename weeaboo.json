@@ -1,5 +1,6 @@
 {
   "graphics": {
+    "font": "DejaVuSerif",
     "video_mode": "1366x768",
     "fullscreen": "false",
     "MSAA": 4

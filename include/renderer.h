@@ -20,6 +20,8 @@
 
 class Renderable;
 using PRenderable = std::shared_ptr<Renderable>;
+class Overlay;
+using POverlay = std::shared_ptr<Overlay>;
 
 class Renderer : public Singleton<Renderer> {
 public:
@@ -38,6 +40,7 @@ public:
 	static const InternString HDR_BLEND_SHADER;
 	static const InternString GAUSSIAN_BLUR_SHADER;
 	static const InternString BILLBOARD_SHADER;
+    static const InternString TEXT_OVERLAY_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
     static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
@@ -77,6 +80,7 @@ public:
     void add_light(const glm::vec3& position, const glm::vec3& color, float linear = 0.5f, float quadratic = 1.0f);
 
     void enqueue_renderable(PRenderable renderable);
+    void enqueue_overlay(POverlay overlay);
 
 private:
     static const float Z_NEAR;
@@ -98,6 +102,7 @@ private:
 	glm::vec3 view_pos;
 
     std::vector<PRenderable> render_queue;
+    std::vector<POverlay> overlay_queue;
 
     std::vector<Light> lights;
     int shadow_map_light_index;
@@ -142,6 +147,8 @@ private:
 
 	void setup_HDR();
 	void post_process_pass();
+
+    void overlay_pass();
 };
 
 #define RENDERER Renderer::get_singleton()

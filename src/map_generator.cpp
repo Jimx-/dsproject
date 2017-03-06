@@ -78,7 +78,7 @@ void MapGenerator::generate(int maxFeatures, MapGenerator::Difficulty h)
         std::cout << "Unable to place Key.\n";
          return ;
     }
-    for(int i = 0; i < h/2; i++)
+    for(int i = 0; i < h; i++)
     {
         if (!placeObject(Spawn)) {
             std::cout << "Unable to place Spawns.\n";

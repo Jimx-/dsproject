@@ -80,6 +80,11 @@ Renderer::Renderer()
 	use_shader(BILLBOARD_SHADER);
 	billboard_shader->uniform("uTexture", 0);
 
+    PShaderProgram text_shader(new ShaderProgram("resources/shaders/text_overlay.vert", "resources/shaders/text_overlay.frag"));
+    shaders[TEXT_OVERLAY_SHADER] = text_shader;
+    use_shader(TEXT_OVERLAY_SHADER);
+    text_shader->uniform("uText", 0);
+
     setup_gbuffer();
     setup_quad();
     setup_SSAO();
@@ -264,6 +269,8 @@ void Renderer::setup_HDR()
 void Renderer::set_viewport(int width, int height)
 {
     projection = glm::perspective(FOV, width / (float) height, Z_NEAR, Z_FAR);
+    g_screen_height = height;
+    g_screen_width = width;
 }
 
 void Renderer::use_shader(InternString name)
@@ -339,6 +346,7 @@ void Renderer::end_frame()
     SSAO_pass();
     render_lighting_pass();
 	post_process_pass();
+    overlay_pass();
 
     while (xforms.size() > 1) xforms.pop();
 }
@@ -364,6 +372,11 @@ void Renderer::add_light(const glm::vec3& position, const glm::vec3& color, floa
 void Renderer::enqueue_renderable(PRenderable renderable)
 {
     render_queue.push_back(renderable);
+}
+
+void Renderer::enqueue_overlay(POverlay overlay)
+{
+    overlay_queue.push_back(overlay);
 }
 
 void Renderer::update_camera(const Camera& camera)
@@ -570,3 +583,16 @@ void Renderer::post_process_pass()
 	render_quad();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+void Renderer::overlay_pass()
+{
+    use_shader(TEXT_OVERLAY_SHADER);
+    glm::mat4 proj = glm::ortho(0.0f, (float)g_screen_width, 0.0f, (float)g_screen_height);
+    uniform("uProjection", 1, false, glm::value_ptr(proj));
+
+    for (int i = 0; i < overlay_queue.size(); i++) {
+        if (overlay_queue[i]->get_technique() != Overlay::Technique::TEXT) continue;
+        overlay_queue[i]->draw(*this);
+    }
+}
+

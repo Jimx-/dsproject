@@ -9,6 +9,7 @@
 #include "string_utils.h"
 
 #include <memory>
+#include <string>
 
 class ConfigFile {
 public:
@@ -26,5 +27,6 @@ extern int g_screen_width;
 extern int g_screen_height;
 extern bool g_fullscreen;
 extern int g_MSAA;
+extern std::string g_font;
 
 #endif //WEEABOO_CONFIG_H

@@ -26,6 +26,8 @@ ADD_SUBDIRECTORY(${TOPDIR}/ext/bullet)
 
 EXECUTE_PROCESS(COMMAND python amalgamate.py WORKING_DIRECTORY ${TOPDIR}/ext/jsoncpp)
 
+FIND_PACKAGE(Freetype REQUIRED)
+
 INCLUDE_DIRECTORIES(${TOPDIR}/include
         ${TOPDIR}/ext/assimp/include
         ${TOPDIR}/ext/glad/include
@@ -33,7 +35,8 @@ INCLUDE_DIRECTORIES(${TOPDIR}/include
         ${TOPDIR}/ext/bullet/src
         ${TOPDIR}/ext/glm
         ${TOPDIR}/ext/stb
-        ${TOPDIR}/ext/jsoncpp/dist)
+        ${TOPDIR}/ext/jsoncpp/dist
+        ${FREETYPE_INCLUDE_DIRS})
 
 IF(${UNIX})
     ADD_DEFINITIONS(-D_UNIX_)
@@ -80,10 +83,11 @@ SET(WEEABOO_SRCLIST
 		src/particle.cpp
 		src/particle_system.cpp
         src/simulation.cpp
-        src/motion_state.cpp)
+        src/motion_state.cpp
+        src/text_overlay.cpp)
 
 SET(LIBRARIES
-    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} BulletDynamics BulletCollision LinearMath)
+    assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} BulletDynamics BulletCollision LinearMath ${FREETYPE_LIBRARIES})
 
 ADD_EXECUTABLE(weeaboo ${WEEABOO_SRCLIST} ${EXT_SRCLIST})
 TARGET_LINK_LIBRARIES(weeaboo ${LIBRARIES})
