@@ -24,6 +24,8 @@ private:
     std::shared_ptr<Json::Value> root;
 };
 
+extern GLFWwindow* g_window;
+
 extern Map* g_map;
 extern int g_map_width;
 extern int g_map_height;

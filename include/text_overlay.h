@@ -20,6 +20,8 @@ public:
     void set_x(float x) { this->x = x; }
     void set_y(float y) { this->y = y; }
 
+    glm::vec2 size_hint() const;
+
 private:
     std::string text;
     float x, y, scale;

@@ -84,7 +84,9 @@ SET(WEEABOO_SRCLIST
 		src/particle_system.cpp
         src/simulation.cpp
         src/motion_state.cpp
-        src/text_overlay.cpp)
+        src/text_overlay.cpp
+        src/controllers.cpp
+        src/gui.cpp)
 
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} BulletDynamics BulletCollision LinearMath ${FREETYPE_LIBRARIES})

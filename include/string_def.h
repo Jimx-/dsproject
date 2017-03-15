@@ -17,6 +17,7 @@ const InternString Renderer::GAUSSIAN_BLUR_SHADER = "gaussian_blur_shader";
 const InternString Renderer::BILLBOARD_SHADER = "billboard_shader";
 const InternString Renderer::TEXT_OVERLAY_SHADER = "text_overlay_shader";
 const InternString Renderer::MINIMAP_SHADER = "minimap_shader";
+const InternString Renderer::GUI_SHADER = "gui_shader";
 
 const InternString ShaderProgram::MVP = "uMVP";
 const InternString ShaderProgram::VP = "uVP";

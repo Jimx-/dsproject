@@ -106,6 +106,7 @@ btRigidBody* MainCharacter::setup_rigid_body(const btTransform& trans)
 	btRigidBody::btRigidBodyConstructionInfo camRigidBodyCI(mass, motion_state.get(), camShape, camInertia);
 	btRigidBody* camRigidBody = new btRigidBody(camRigidBodyCI);
 	camRigidBody->setAngularFactor(btVector3(0, 1, 0));
+	camRigidBody->setActivationState(DISABLE_DEACTIVATION);
 
 	return camRigidBody;
 }

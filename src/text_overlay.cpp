@@ -141,3 +141,18 @@ void TextOverlay::draw(Renderer& renderer)
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 }
+
+glm::vec2 TextOverlay::size_hint() const
+{
+    float cur_x = 0, cur_y = 0;
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); c++)
+    {
+        Character ch = characters[*c];
+
+        cur_y = (ch.size.y * scale > 0) ? ch.size.y * scale : 0;
+        cur_x += (ch.advance >> 6) * scale; //(2^6 = 64)
+    }
+
+    return glm::vec2{cur_x, cur_y};
+}

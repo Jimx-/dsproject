@@ -87,6 +87,11 @@ Renderer::Renderer()
     use_shader(TEXT_OVERLAY_SHADER);
     text_shader->uniform("uText", 0);
 
+    PShaderProgram gui_shader(new ShaderProgram("resources/shaders/gui_overlay.vert", "resources/shaders/gui_overlay.frag"));
+    shaders[GUI_SHADER] = gui_shader;
+    use_shader(GUI_SHADER);
+    gui_shader->uniform("uText", 0);
+
     PShaderProgram minimap_shader(new ShaderProgram("resources/shaders/minimap.vert", "resources/shaders/minimap.frag"));
     shaders[MINIMAP_SHADER] = minimap_shader;
     use_shader(MINIMAP_SHADER);
@@ -519,7 +524,7 @@ void Renderer::SSAO_pass()
 
     glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo);
     glClear(GL_COLOR_BUFFER_BIT);
-    use_shader(SSAO_BLUR_SHADER);
+   use_shader(SSAO_BLUR_SHADER);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ssao_color_buffer);
     render_quad();
@@ -710,6 +715,11 @@ void Renderer::overlay_pass()
 
     for (int i = 0; i < overlay_queue.size(); i++) {
         if (overlay_queue[i]->get_technique() != Overlay::Technique::TEXT) continue;
+        overlay_queue[i]->draw(*this);
+    }
+
+    for (int i = 0; i < overlay_queue.size(); i++) {
+        if (overlay_queue[i]->get_technique() != Overlay::Technique::GUI_ELEMENT) continue;
         overlay_queue[i]->draw(*this);
     }
 

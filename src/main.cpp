@@ -8,6 +8,8 @@
 #include "map.h"
 #include "simulation.h"
 #include "text_overlay.h"
+#include "controllers.h"
+#include "gui.h"
 
 #include "characters.h"
 
@@ -17,7 +19,8 @@
 using namespace std;
 
 const string config_file = "weeaboo.json";
-GLFWwindow* window;
+GLFWwindow* g_window;
+Controller* current_controller = nullptr;
 
 void load_config()
 {
@@ -92,8 +95,8 @@ void setup_context()
 	if (g_fullscreen) {
 		monitor = glfwGetPrimaryMonitor();
 	}
-    window = glfwCreateWindow(g_screen_width, g_screen_height, "Weeaboo", monitor, nullptr);
-    glfwMakeContextCurrent(window);
+    g_window = glfwCreateWindow(g_screen_width, g_screen_height, "Weeaboo", monitor, nullptr);
+    glfwMakeContextCurrent(g_window);
 
     // Load OpenGL library
     gladLoadGL();
@@ -107,55 +110,17 @@ void setup_context()
 	new ParticleSystem();
 
     TextOverlay::setup_font(g_font);
+    GUIWidget::setup_gui();
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-    Camera::Direction dir;
-	bool move = false;
-    if (key == GLFW_KEY_W) {
-        dir = Camera::Direction::FORWARD;
-		move = true;
-    }
-    if (key == GLFW_KEY_S) {
-        dir = Camera::Direction::BACK;
-		move = true;
-    }
-    if (key == GLFW_KEY_A) {
-        dir = Camera::Direction::LEFT;
-		move = true;
-    }
-    if (key == GLFW_KEY_D) {
-        dir = Camera::Direction::RIGHT;
-		move = true;
-    }
-	if (action != GLFW_RELEASE) {
-        if (move) {
-            CHARACTER_MANAGER.main_char().set_linear_velocity(
-                CHARACTER_MANAGER.main_char().get_camera().get_linear_velocity(dir, 3.0f)
-            );
-        }
-
-        if (key == GLFW_KEY_ESCAPE) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        } else if (key == GLFW_KEY_SPACE) {
-            auto pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
-            if (pos[1] < 1.26f) {
-                CHARACTER_MANAGER.main_char().apply_impulse({0.0f, 4.0f, 0.0f});
-            }
-        }
-	} else {
-        if (move) CHARACTER_MANAGER.main_char().set_linear_velocity({0.0f, 0.0f, 0.0f});
-    }
-
+    current_controller->handle_key(key, scancode, action, mode);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    static float last_x, last_y;
-    CHARACTER_MANAGER.main_char().get_camera().processmouse(xpos - last_x, -(ypos - last_y), true);
-    last_x = xpos;
-    last_y = ypos;
+    current_controller->handle_mouse(xpos, ypos);
 }
 
 void show_stat(float dt)
@@ -179,18 +144,19 @@ int main()
     LOG.info("Starting game...");
 
 	g_map = new Map(g_map_width, g_map_height);
-    PRenderable map(g_map);
+    current_controller = new GameController();
+    //POverlay label(new GUILabel(500.f, 500.f, 500.f, 100.f, "Start", MaterialTexture::create_texture("button_normal.png")));
 
     double last_time = glfwGetTime();
     double current_time;
-    glfwSetWindowTitle(window, "Weeaboo");
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetWindowTitle(g_window, "Weeaboo");
+    glfwSetInputMode(g_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetKeyCallback(g_window, key_callback);
+    glfwSetCursorPosCallback(g_window, mouse_callback);
 
     // Game loop
 	int step = 0;
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(g_window))
     {
         // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
@@ -203,21 +169,14 @@ int main()
         SIMULATION.update(dt);
 		CHARACTER_MANAGER.update(dt);
 
-
         RENDERER.begin_frame();
-        RENDERER.update_camera(CHARACTER_MANAGER.main_char().get_camera());
-
         if (dt > 0) {
             show_stat(dt);
         }
-
-        RENDERER.enqueue_renderable(map);
-        CHARACTER_MANAGER.submit(RENDERER);
-		PARTICLE_SYSTEM.submit(RENDERER);
-
+        current_controller->update_view(RENDERER);
         RENDERER.end_frame();
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(g_window);
     }
     // Properly de-allocate all resources once they've outlived their purpose
     // Terminate GLFW, clearing any resources allocated by GLFW.

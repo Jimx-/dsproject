@@ -42,6 +42,7 @@ public:
 	static const InternString BILLBOARD_SHADER;
     static const InternString TEXT_OVERLAY_SHADER;
     static const InternString MINIMAP_SHADER;
+    static const InternString GUI_SHADER;
 
     static const GLuint DIFFUSE_TEXTURE_TARGET = GL_TEXTURE0;
     static const GLuint NORMAL_MAP_TARGET = GL_TEXTURE1;
@@ -88,8 +89,8 @@ private:
     static const float Z_FAR;
     static const float FOV;
 
-    static const int SHADOW_WIDTH = 1024;
-    static const int SHADOW_HEIGHT = 1024;
+    static const int SHADOW_WIDTH = 2048;
+    static const int SHADOW_HEIGHT = 2048;
     static const float SHADOW_NEAR;
     static const float SHADOW_FAR;
 
