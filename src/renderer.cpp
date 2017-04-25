@@ -103,6 +103,8 @@ Renderer::Renderer()
 	setup_HDR();
     setup_shadow_map();
     setup_minimap();
+
+    enable_minimap = false;
 }
 
 void Renderer::setup_gbuffer()
@@ -702,7 +704,6 @@ void Renderer::draw_minimap()
         }
     }
 
-
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 }
@@ -723,7 +724,9 @@ void Renderer::overlay_pass()
         overlay_queue[i]->draw(*this);
     }
 
-    use_shader(MINIMAP_SHADER);
-    draw_minimap();
+    if (enable_minimap) {
+        use_shader(MINIMAP_SHADER);
+        draw_minimap();
+    }
 }
 

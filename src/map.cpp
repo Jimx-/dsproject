@@ -99,6 +99,9 @@ void Map::setup_mesh()
 					}
 				} else if (tile == MapGenerator::Tile::Player) {
                     CHARACTER_MANAGER.main_char().set_position(glm::vec3{ i * TILE_SIZE, 2.0f, j * TILE_SIZE });
+                } else if (tile == MapGenerator::Tile::Key) {
+                    CHARACTER_MANAGER.spawn_item<ChestKeyItem>(
+                        glm::vec3((i - 0.5f) * TILE_SIZE, 0.0f, (j + 0.5f) * TILE_SIZE));
                 }
             } else if (tile == MapGenerator::Tile::Wall) {
                 float start_x = i * TILE_SIZE;

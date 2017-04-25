@@ -74,12 +74,21 @@ public:
 	Camera& get_camera() { return *camera; }
 	virtual void draw(Renderer& renderer) override {}
 
+	float get_hp() const { return hp; }
+	int get_score() const { return score; }
+	void deal_damage(float damage);
+	void add_score(int score) { this->score += score; }
+
+	static const float MAX_HP;
+
 private:
 	virtual btRigidBody* setup_rigid_body(const btTransform& trans);
 	virtual AnimationModel* load_model() const override { return nullptr; }
 
 	std::unique_ptr<Camera> camera;
     std::unique_ptr<CameraMotionState> motion_state;
+	float hp;
+    int score;
 };
 
 class SkeletonCharacter : public RigidCharacter {
@@ -88,11 +97,12 @@ private:
     virtual AnimationModel* load_model() const override;
 	virtual void intrinsic_transform(Renderer& renderer);
 	virtual btRigidBody* setup_rigid_body(const btTransform& trans);
+	bool bfs(glm::vec3 pos_s, glm::vec3 pos_f);
 
 public:
     SkeletonCharacter(glm::vec3 pos);
 
-	virtual void update(float dt);
+	virtual void update(float dt) override;
 };
 
 class TrapItem : public StaticCharacter {
@@ -101,8 +111,12 @@ private:
 	virtual AnimationModel* load_model() const override;
 	virtual void intrinsic_transform(Renderer& renderer);
 
+	bool triggered;
+
 public:
 	TrapItem(glm::vec3 pos);
+
+	virtual void update(float dt) override;
 };
 
 class ChestTrapItem : public RigidCharacter {
@@ -112,8 +126,12 @@ private:
 	virtual void intrinsic_transform(Renderer& renderer);
 	virtual btRigidBody* setup_rigid_body(const btTransform& trans);
 
+	bool triggered;
+	glm::vec3 pos;
 public:
 	ChestTrapItem(glm::vec3 pos);
+
+    virtual void update(float dt) override;
 };
 
 class TorchItem : public RigidCharacter {
@@ -136,6 +154,20 @@ private:
 
 public:
 	BarrelItem(glm::vec3 pos);
+};
+
+class ChestKeyItem : public RigidCharacter {
+private:
+	static PModel _prepare_model();
+	virtual AnimationModel* load_model() const override;
+	virtual void intrinsic_transform(Renderer& renderer);
+	virtual btRigidBody* setup_rigid_body(const btTransform& trans);
+
+	glm::vec3 pos;
+public:
+	ChestKeyItem(glm::vec3 pos);
+
+	virtual void update(float dt) override;
 };
 
 #endif

@@ -21,6 +21,7 @@ using namespace std;
 const string config_file = "weeaboo.json";
 GLFWwindow* g_window;
 Controller* current_controller = nullptr;
+map<string, Controller*> controllers;
 
 void load_config()
 {
@@ -137,6 +138,13 @@ void show_stat(float dt)
     RENDERER.enqueue_overlay(text);
 }
 
+void Controller::switch_controller(const string& name)
+{
+    if (current_controller) current_controller->exit();
+    current_controller = controllers[name];
+    current_controller->enter();
+}
+
 // The MAIN function, from here we start the application and run the game loop
 int main()
 {
@@ -144,13 +152,16 @@ int main()
     LOG.info("Starting game...");
 
 	g_map = new Map(g_map_width, g_map_height);
-    current_controller = new GameController();
+    controllers["main_menu"] = new MainMenuController();
+    controllers["game"] = new GameController();
+    controllers["in_game_menu"] = new InGameMenuController();
+    controllers["end_game"] = new EndGameController();
+    Controller::switch_controller("main_menu");
     //POverlay label(new GUILabel(500.f, 500.f, 500.f, 100.f, "Start", MaterialTexture::create_texture("button_normal.png")));
 
     double last_time = glfwGetTime();
     double current_time;
     glfwSetWindowTitle(g_window, "Weeaboo");
-    glfwSetInputMode(g_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(g_window, key_callback);
     glfwSetCursorPosCallback(g_window, mouse_callback);
 
@@ -160,6 +171,12 @@ int main()
     {
         // Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
         glfwPollEvents();
+
+        if (glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_LEFT)) {
+            double xpos, ypos;
+            glfwGetCursorPos(g_window, &xpos, &ypos);
+            mouse_callback(g_window, xpos, ypos);
+        }
 
         current_time = glfwGetTime();
         float dt = (float) current_time - (float) last_time;

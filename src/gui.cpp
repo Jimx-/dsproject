@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "config.h"
+#include "log_manager.h"
 
 static GLuint gui_VAO;
 static GLuint gui_VBO;
@@ -20,15 +21,57 @@ void GUIWidget::setup_gui()
 GUIWidget::GUIWidget(float left, float top, float width, float height) : Overlay(Overlay::Technique::GUI_ELEMENT),
                                                                          left(left), top(top), width(width), height(height)
 {
+}
 
+bool GUIWidget::hit_test(double xpos, double ypos)
+{
+    return ((float) xpos >= left && (float) xpos < left + width
+        && (float) ypos <= top && (float) ypos > top - height);
 }
 
 GUILabel::GUILabel(float left, float top, float width, float height, const std::string& caption, PMaterialTexture background) :
-    GUIWidget(left, top, width, height), background(background)
+    GUIWidget(left, top, width, height), background(background), on_click_listener(nullptr)
 {
     text.reset(new TextOverlay(caption, 0.0, 0.0));
     auto text_size = text->size_hint();
     text->set_x((width - text_size[0]) / 2 + left);
+    text->set_y(top - (height - text_size[1]) / 2 - text_size[1]);
+    mouse_state = MOUSE_OUTSIDE;
+    enabled = false;
+    mask_width = 1.0f;
+}
+
+GUILabel::GUILabel(float width, float height, const std::string& text,
+                   PMaterialTexture background) : GUILabel(0.0f, 0.0f, width, height, text, background)
+{
+    mouse_state = MOUSE_OUTSIDE;
+    enabled = false;
+    mask_width = 1.0f;
+}
+
+GUILabel::GUILabel(const std::string& caption, float font_size, glm::vec3 color, PMaterialTexture background) :
+                    GUIWidget(0.0f, 0.0f, 0.0f, 0.0f), background(background), on_click_listener(nullptr)
+{
+    text.reset(new TextOverlay(caption, 0.0, 0.0, color, font_size));
+    auto text_size = text->size_hint();
+    set_width(text_size[0]);
+    set_height(text_size[1]);
+    mouse_state = MOUSE_OUTSIDE;
+    enabled = false;
+    mask_width = 1.0f;
+}
+
+void GUILabel::set_left(float l)
+{
+    GUIWidget::set_left(l);
+    auto text_size = text->size_hint();
+    text->set_x((width - text_size[0]) / 2 + left);
+}
+
+void GUILabel::set_top(float t)
+{
+    GUIWidget::set_top(t);
+    auto text_size = text->size_hint();
     text->set_y(top - (height - text_size[1]) / 2 - text_size[1]);
 }
 
@@ -51,11 +94,11 @@ void GUILabel::draw(Renderer& renderer)
         GLfloat vertices[6][4] = {
             { left,     top,   0.0, 0.0 },
             { left,     top - height,       0.0, 1.0 },
-            { left + width, top - height,       1.0, 1.0 },
+            { left + width * mask_width, top - height,       mask_width, 1.0 },
 
             { left,     top,   0.0, 0.0 },
-            { left + width, top - height,       1.0, 1.0 },
-            { left + width, top,   1.0, 0.0 }
+            { left + width * mask_width, top - height,       mask_width, 1.0 },
+            { left + width * mask_width, top,   mask_width, 0.0 }
         };
 
         glBindBuffer(GL_ARRAY_BUFFER, gui_VBO);
@@ -74,4 +117,36 @@ void GUILabel::draw(Renderer& renderer)
     renderer.uniform("uProjection", 1, false, glm::value_ptr(proj));
 
     text->draw(renderer);
+}
+
+void GUILabel::handle_mouse(double xpos, double ypos)
+{
+    if (!enabled) return;
+
+    if (!hit_test(xpos, ypos)) {
+        if (mouse_state == MOUSE_HOVER) text->set_color(saved_color);
+        mouse_state = MOUSE_OUTSIDE;
+        return;
+    }
+
+    int mouse = glfwGetMouseButton(g_window, GLFW_MOUSE_BUTTON_LEFT);
+    if (!mouse) {
+        if (mouse_state == MOUSE_PRESSED) {
+            mouse_state = MOUSE_HOVER;
+        } else if (mouse_state == MOUSE_OUTSIDE) {
+            saved_color = text->get_color();
+            glm::vec3 new_color(0.8f * saved_color);
+            if (saved_color[0] == 0.0f && saved_color[1] == 0.0f && saved_color[2] == 0.0f) new_color = {0.2f, 0.2f, 0.2f};
+            text->set_color(new_color);
+            mouse_state = MOUSE_HOVER;
+        }
+    } else {
+        if (mouse_state != MOUSE_PRESSED) {
+            mouse_state = MOUSE_PRESSED;
+
+            if (on_click_listener) {
+                on_click_listener(this);
+            }
+        }
+    }
 }

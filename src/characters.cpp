@@ -1,9 +1,12 @@
 #include "log_manager.h"
 #include "characters.h"
 #include "simulation.h"
+#include "controllers.h"
 #include "map.h"
 #include "config.h"
 #include "character_manager.h"
+
+#include <queue>
 
 void BaseCharacter::init_model()
 {
@@ -88,9 +91,11 @@ void RigidCharacter::apply_impulse(glm::vec3 force, glm::vec3 rel)
 		btVector3(rel.x, rel.y, rel.z));
 }
 
+const float MainCharacter::MAX_HP = 100.0f;
 MainCharacter::MainCharacter()
 {
     init_rigidbody({0.0f, 0.0f, 0.0f});
+	hp = MAX_HP;
 }
 
 btRigidBody* MainCharacter::setup_rigid_body(const btTransform& trans)
@@ -111,6 +116,17 @@ btRigidBody* MainCharacter::setup_rigid_body(const btTransform& trans)
 	return camRigidBody;
 }
 
+void MainCharacter::deal_damage(float damage)
+{
+	if (damage < hp) {
+		hp -= damage;
+		return;
+	}
+
+	hp = 0.0f;
+	Controller::switch_controller("end_game");
+}
+
 SkeletonCharacter::SkeletonCharacter(glm::vec3 pos)
 {
 	init_rigidbody(pos);
@@ -127,7 +143,7 @@ btRigidBody* SkeletonCharacter::setup_rigid_body(const btTransform& trans)
 	skeShape->calculateLocalInertia(mass, skeInertia);
 	btRigidBody::btRigidBodyConstructionInfo skeRigidBodyCI(mass, motion_state, skeShape, skeInertia);
 	btRigidBody* skeRigidBody = new btRigidBody(skeRigidBodyCI);
-	skeRigidBody->setAngularFactor(btVector3(0, 1, 0));
+	skeRigidBody->setAngularFactor(btVector3(0, 0.3, 0));
 
 	return skeRigidBody;
 }
@@ -156,13 +172,62 @@ void SkeletonCharacter::intrinsic_transform(Renderer& renderer)
 	renderer.scale(0.02f, 0.02f, 0.02f);
 }
 
+bool SkeletonCharacter::bfs(glm::vec3 pos_s, glm::vec3 pos_f)
+{
+#define DISTANCE(p1, p2) sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.z - p2.z) * (p1.z - p2.z))
+
+	auto rot_quat = get_rotation();
+   	auto rot = glm::eulerAngles(rot_quat);
+	struct character_attack{
+		glm::vec3 c_pos;
+		int step_attack;
+	};
+    glm::vec3 step[3] = {{-1,0,-1},{1,0,0},{1,0,1}};
+    std::queue<character_attack> q;
+    character_attack c_o;
+	c_o.c_pos = pos_s;
+	c_o.step_attack = 0;
+	q.push(c_o);
+	bool flag = false;
+	while(!q.empty()){
+		character_attack c_n;
+		character_attack c_m;
+		c_n = q.front();
+		q.pop();
+        for(int i = 0; i < 3; i++){
+			c_m = c_n;
+			c_m.c_pos.x += step[i].x*cos(rot.y);
+			c_m.c_pos.z += step[i].z*sin(rot.y);
+			c_m.step_attack = c_n.step_attack+1;
+			if(c_m.step_attack > 4) return false;
+			else if (DISTANCE(c_m.c_pos, pos_f) < 3.0f) return true;
+			else{
+				q.push(c_m);
+			}
+		}
+
+	}
+}
+
 void SkeletonCharacter::update(float dt)
 {
+    return;
+    glm::vec3 pos = get_position();
+	glm::vec3 pos_c = CHARACTER_MANAGER.main_char().get_camera().get_position();
+	if(bfs(pos,pos_c)){
+		set_linear_velocity(pos_c - pos);
+		set_animation("walk");
+		set_animation("attack");
+	}
+	else{
+		set_animation("idle");
+	}
 }
 
 TrapItem::TrapItem(glm::vec3 pos) : StaticCharacter(pos)
 {
 	init_model();
+    triggered = false;
 	//model->start_animation("trigger");
 }
 
@@ -189,7 +254,20 @@ void TrapItem::intrinsic_transform(Renderer& renderer)
 	renderer.scale(0.45f, 0.45f, 0.45f);
 }
 
-ChestTrapItem::ChestTrapItem(glm::vec3 pos)
+void TrapItem::update(float dt)
+{
+	if (triggered) return;
+
+	glm::vec3 main_pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+	main_pos[1] = 0.0f;
+
+	if (DISTANCE(main_pos, pos) < 2.0f) {
+		CHARACTER_MANAGER.main_char().deal_damage(50.0f);
+		triggered = true;
+	}
+}
+
+ChestTrapItem::ChestTrapItem(glm::vec3 pos) : pos(pos)
 {
 	init_rigidbody(pos);
 	init_model();
@@ -223,6 +301,19 @@ btRigidBody* ChestTrapItem::setup_rigid_body(const btTransform& trans)
 	btRigidBody* cheRigidBody = new btRigidBody(cheRigidBodyCI);
 
 	return cheRigidBody;
+}
+
+void ChestTrapItem::update(float dt)
+{
+	if (triggered) return;
+
+    glm::vec3 main_pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+    main_pos[1] = 0.0f;
+
+    if (DISTANCE(main_pos, pos) < 2.0f) {
+        CHARACTER_MANAGER.main_char().add_score(100);
+        triggered = true;
+    }
 }
 
 TorchItem::TorchItem(glm::vec3 pos)
@@ -296,4 +387,50 @@ btRigidBody* BarrelItem::setup_rigid_body(const btTransform& trans)
 	btRigidBody* barRigidBody = new btRigidBody(barRigidBodyCI);
 
 	return barRigidBody;
+}
+
+ChestKeyItem::ChestKeyItem(glm::vec3 pos) : pos(pos)
+{
+	init_rigidbody(pos);
+	init_model();
+}
+
+PModel ChestKeyItem::_prepare_model()
+{
+	static PModel ourModel(new Model("resources/models/MedievalChest_02_open.fbx"));
+	return ourModel;
+}
+
+AnimationModel* ChestKeyItem::load_model() const
+{
+	return new AnimationModel(_prepare_model());
+}
+
+void ChestKeyItem::intrinsic_transform(Renderer& renderer)
+{
+	renderer.translate(-1.3f, -0.5f, 0.0f);
+	renderer.scale(0.04f, 0.04f, 0.04f);
+}
+
+btRigidBody* ChestKeyItem::setup_rigid_body(const btTransform& trans)
+{
+	btDefaultMotionState* motion_state = new btDefaultMotionState(trans);
+	btCollisionShape* cheShape = new btBoxShape(btVector3(0.4, 0.5, 0.2));
+	btScalar mass = 100;
+	btVector3 cheInertia(0, 0, 0);
+	cheShape->calculateLocalInertia(mass, cheInertia);
+	btRigidBody::btRigidBodyConstructionInfo cheRigidBodyCI(mass, motion_state, cheShape, cheInertia);
+	btRigidBody* cheRigidBody = new btRigidBody(cheRigidBodyCI);
+
+	return cheRigidBody;
+}
+
+void ChestKeyItem::update(float dt)
+{
+	glm::vec3 main_pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
+	main_pos[1] = 0.0f;
+
+	if (DISTANCE(main_pos, pos) < 2.0f) {
+        Controller::switch_controller("end_game");
+	}
 }

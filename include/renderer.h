@@ -84,6 +84,8 @@ public:
     void enqueue_renderable(PRenderable renderable);
     void enqueue_overlay(POverlay overlay);
 
+    void toggle_minimap(bool st) { enable_minimap = st; }
+
 private:
     static const float Z_NEAR;
     static const float Z_FAR;
@@ -135,6 +137,7 @@ private:
 
     GLuint minimap_VAO;
     GLuint minimap_VBO;
+    bool enable_minimap;
 
     void setup_gbuffer();
     void update_mvp();

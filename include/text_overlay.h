@@ -20,6 +20,9 @@ public:
     void set_x(float x) { this->x = x; }
     void set_y(float y) { this->y = y; }
 
+    glm::vec3 get_color() const { return color; }
+    void set_color(glm::vec3 c) { color = c; }
+
     glm::vec2 size_hint() const;
 
 private:
