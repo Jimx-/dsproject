@@ -126,7 +126,8 @@ void WidgetController::handle_mouse(double xpos, double ypos)
 
 MainMenuController::MainMenuController() : WidgetController("start2.bmp")
 {
-    PGUIWidget title(new GUILabel("Weeaboo", 3.0f, {0.0f, 0.0f, 0.0f}));
+    PGUIWidget title(new GUILabel("Weeaboo's", 2.0f, {0.0f, 0.0f, 0.0f}));
+    PGUIWidget title2(new GUILabel("Adventure", 2.0f, {0.0f, 0.0f, 0.0f}));
     PGUIWidget split(new GUIPlaceholder(0.0f, 80.0f));
     PGUIWidget btn_start(new GUILabel("Start", 1.5f, {0.0f, 0.0f, 0.0f}));
     PGUIWidget btn_exit(new GUILabel("Exit", 1.5f, {0.0f, 0.0f, 0.0f}));
@@ -137,6 +138,7 @@ MainMenuController::MainMenuController() : WidgetController("start2.bmp")
     btn_exit->set_on_click_listener([](GUIWidget*){ ::exit(0); });
 
     add_widget(title);
+    add_widget(title2);
     add_widget(split);
     add_widget(btn_start);
     add_widget(btn_exit);

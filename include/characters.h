@@ -1,5 +1,6 @@
 #ifndef WEEABOO_CHARACTERS_H
 #define WEEABOO_CHARACTERS_H
+#include <queue>
 
 #include "renderable.h"
 #include "motion_state.h"
@@ -7,7 +8,6 @@
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
-
 class BaseCharacter : public Renderable {
 public:
 	virtual glm::vec3 get_position() const = 0;
@@ -59,6 +59,7 @@ public:
 	virtual void set_rotation(glm::quat rot);
 
 	virtual void set_linear_velocity(glm::vec3 velo);
+    virtual void set_angular_velocity(glm::vec3 velo);
 	virtual void apply_impulse(glm::vec3 force, glm::vec3 rel = {0.0f, 0.0f, 0.0f});
 
 protected:
@@ -101,7 +102,8 @@ private:
 
 public:
     SkeletonCharacter(glm::vec3 pos);
-
+	enum STATE{WALK,ATTACK,IDLE}nstate;
+	float t;
 	virtual void update(float dt) override;
 };
 

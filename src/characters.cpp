@@ -3,10 +3,15 @@
 #include "simulation.h"
 #include "controllers.h"
 #include "map.h"
-#include "config.h"
 #include "character_manager.h"
+#include "config.h"
 
+#include <cmath>
 #include <queue>
+#define DISTANCE(p1, p2) sqrt((p1.x - p2.x) * (p1.x-p2.x) + (p1.z - p2.z) * (p1.z - p2.z))
+
+const float PI = acos(-1.0f);
+const float PI2 = PI * 2;
 
 void BaseCharacter::init_model()
 {
@@ -59,6 +64,12 @@ void RigidCharacter::set_linear_velocity(glm::vec3 velo)
 {
 	btVector3 v(velo.x, velo.y, velo.z);
 	rigid_body->setLinearVelocity(v);
+}
+
+void RigidCharacter::set_angular_velocity(glm::vec3 velo)
+{
+	btVector3 v(velo.x, velo.y, velo.z);
+	rigid_body->setAngularVelocity(v);
 }
 
 glm::vec3 RigidCharacter::get_position() const
@@ -132,6 +143,7 @@ SkeletonCharacter::SkeletonCharacter(glm::vec3 pos)
 	init_rigidbody(pos);
     init_model();
 	set_animation("idle");
+    nstate = IDLE;
 }
 
 btRigidBody* SkeletonCharacter::setup_rigid_body(const btTransform& trans)
@@ -143,7 +155,8 @@ btRigidBody* SkeletonCharacter::setup_rigid_body(const btTransform& trans)
 	skeShape->calculateLocalInertia(mass, skeInertia);
 	btRigidBody::btRigidBodyConstructionInfo skeRigidBodyCI(mass, motion_state, skeShape, skeInertia);
 	btRigidBody* skeRigidBody = new btRigidBody(skeRigidBodyCI);
-	skeRigidBody->setAngularFactor(btVector3(0, 0.3, 0));
+	skeRigidBody->setAngularFactor(btVector3(0, 0, 0));
+	skeRigidBody->setActivationState(DISABLE_DEACTIVATION);
 
 	return skeRigidBody;
 }
@@ -172,55 +185,82 @@ void SkeletonCharacter::intrinsic_transform(Renderer& renderer)
 	renderer.scale(0.02f, 0.02f, 0.02f);
 }
 
-bool SkeletonCharacter::bfs(glm::vec3 pos_s, glm::vec3 pos_f)
-{
-#define DISTANCE(p1, p2) sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.z - p2.z) * (p1.z - p2.z))
-
-	auto rot_quat = get_rotation();
-   	auto rot = glm::eulerAngles(rot_quat);
-	struct character_attack{
-		glm::vec3 c_pos;
-		int step_attack;
-	};
-    glm::vec3 step[3] = {{-1,0,-1},{1,0,0},{1,0,1}};
-    std::queue<character_attack> q;
-    character_attack c_o;
-	c_o.c_pos = pos_s;
-	c_o.step_attack = 0;
-	q.push(c_o);
-	bool flag = false;
-	while(!q.empty()){
-		character_attack c_n;
-		character_attack c_m;
-		c_n = q.front();
-		q.pop();
-        for(int i = 0; i < 3; i++){
-			c_m = c_n;
-			c_m.c_pos.x += step[i].x*cos(rot.y);
-			c_m.c_pos.z += step[i].z*sin(rot.y);
-			c_m.step_attack = c_n.step_attack+1;
-			if(c_m.step_attack > 4) return false;
-			else if (DISTANCE(c_m.c_pos, pos_f) < 3.0f) return true;
-			else{
-				q.push(c_m);
-			}
-		}
-
-	}
-}
-
 void SkeletonCharacter::update(float dt)
 {
-    return;
-    glm::vec3 pos = get_position();
+	const float ATTACK_DIST_THRESHOLD = 1.0f;
+	const float TURN_THRESHOLD = glm::radians(10.f);
+
+	glm::vec3 pos = get_position();
 	glm::vec3 pos_c = CHARACTER_MANAGER.main_char().get_camera().get_position();
-	if(bfs(pos,pos_c)){
-		set_linear_velocity(pos_c - pos);
-		set_animation("walk");
-		set_animation("attack");
+	glm::vec3 velo = pos_c - pos;
+
+	float velo_dir = ::atan2(velo.x, -velo.z);
+	btScalar xform[16];
+	rigid_body->getWorldTransform().getOpenGLMatrix(xform);
+	float cur_dir = ::atan2(xform[8], -xform[10]);
+
+	float diff1 = abs(velo_dir - cur_dir);
+    float diff2 = abs((velo_dir + PI2) - cur_dir);
+	float diff3 = abs(velo_dir - (cur_dir + PI2));
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+	float min_diff = MIN(MIN(diff1, diff2), diff3);
+    if (min_diff == diff2) {
+		velo_dir += PI2;
+	} else if (min_diff == diff3) {
+		cur_dir += PI2;
 	}
-	else{
-		set_animation("idle");
+
+    LogManager::get_singleton().info("V%f, C%f", velo_dir, cur_dir);
+	switch (nstate){
+		case IDLE:
+			if(DISTANCE(pos, pos_c) <= 8 && DISTANCE(pos,pos_c) > ATTACK_DIST_THRESHOLD){
+				set_animation("walk");
+				set_linear_velocity(velo);
+				nstate = WALK;
+			}
+			if(DISTANCE(pos,pos_c) <= ATTACK_DIST_THRESHOLD){
+				set_animation("attack");
+				nstate = ATTACK;
+				CHARACTER_MANAGER.main_char().deal_damage(10.f);
+				t = 0;
+			}
+			break;
+		case WALK:
+			if(DISTANCE(pos, pos_c) <= ATTACK_DIST_THRESHOLD){
+				set_animation("attack");
+				nstate = ATTACK;
+				CHARACTER_MANAGER.main_char().deal_damage(10.f);
+				t = 0;
+			}
+			else if(DISTANCE(pos,pos_c) > 8){
+				set_animation("idle");
+				nstate = IDLE;
+			}
+			if (min_diff > TURN_THRESHOLD) {
+				if (cur_dir < velo_dir)
+					set_angular_velocity({0, -5 * min_diff, 0});
+				else
+					set_angular_velocity({0, 5 * min_diff, 0});
+			}
+			set_linear_velocity(velo);
+            break;
+		case ATTACK:
+			t+=dt;
+			set_linear_velocity({0, 0, 0});
+			set_angular_velocity({0, 0, 0});
+			if(t > 3 && DISTANCE(pos,pos_c)> ATTACK_DIST_THRESHOLD && DISTANCE(pos,pos_c) < 8){
+				set_animation("walk");
+				set_linear_velocity(velo);
+				nstate = WALK;
+			}
+			else if(t <= 3){
+				nstate = ATTACK;
+			}
+			else if(DISTANCE(pos,pos_c) >= 8 || t>3){
+				set_animation("idle");
+				nstate = IDLE;
+			}
+
 	}
 }
 
@@ -260,9 +300,8 @@ void TrapItem::update(float dt)
 
 	glm::vec3 main_pos = CHARACTER_MANAGER.main_char().get_camera().get_position();
 	main_pos[1] = 0.0f;
-
-	if (DISTANCE(main_pos, pos) < 2.0f) {
-		CHARACTER_MANAGER.main_char().deal_damage(50.0f);
+	if (DISTANCE(main_pos, pos) < 1.0f) {
+		CHARACTER_MANAGER.main_char().deal_damage(10.0f);
 		triggered = true;
 	}
 }
@@ -433,4 +472,4 @@ void ChestKeyItem::update(float dt)
 	if (DISTANCE(main_pos, pos) < 2.0f) {
         Controller::switch_controller("end_game");
 	}
-}
+;}
