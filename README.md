@@ -38,7 +38,7 @@ cmake .. && make
 
 ## Screenshot
 
-![screenshot](https://ibb.co/isQ0kJ)
+![screenshot](https://preview.ibb.co/djmUed/screenshot.png)
 
 
 
