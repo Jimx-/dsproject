@@ -1,5 +1,5 @@
-#ifndef WEEABOO_ANIMATION_H
-#define WEEABOO_ANIMATION_H
+#ifndef DSPROJECT_ANIMATION_H
+#define DSPROJECT_ANIMATION_H
 
 #include "mesh.h"
 #include "renderable.h"

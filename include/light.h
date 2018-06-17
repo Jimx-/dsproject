@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-18.
 //
 
-#ifndef WEEABOO_LIGHT_H
-#define WEEABOO_LIGHT_H
+#ifndef DSPROJECT_LIGHT_H
+#define DSPROJECT_LIGHT_H
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -22,5 +22,5 @@ struct Light {
     }
 };
 
-#endif //WEEABOO_LIGHT_H
+#endif //DSPROJECT_LIGHT_H
 

@@ -18,7 +18,7 @@
 
 using namespace std;
 
-const string config_file = "weeaboo.json";
+const string config_file = "dsproject.json";
 GLFWwindow* g_window;
 Controller* current_controller = nullptr;
 map<string, Controller*> controllers;
@@ -74,7 +74,7 @@ void setup_context()
 {
     if (!LogManager::get_singleton_ptr()) {
         new LogManager();
-        LOG.add_log("weeaboo.log", LogMessageLevel::DEBUG, true);
+        LOG.add_log("dsproject.log", LogMessageLevel::DEBUG, true);
     }
 
     load_config();
@@ -96,7 +96,7 @@ void setup_context()
 	if (g_fullscreen) {
 		monitor = glfwGetPrimaryMonitor();
 	}
-    g_window = glfwCreateWindow(g_screen_width, g_screen_height, "Weeaboo", monitor, nullptr);
+    g_window = glfwCreateWindow(g_screen_width, g_screen_height, "dsproject", monitor, nullptr);
     glfwMakeContextCurrent(g_window);
 
     // Load OpenGL library
@@ -161,7 +161,7 @@ int main()
 
     double last_time = glfwGetTime();
     double current_time;
-    glfwSetWindowTitle(g_window, "Weeaboo");
+    glfwSetWindowTitle(g_window, "dsproject");
     glfwSetKeyCallback(g_window, key_callback);
     glfwSetCursorPosCallback(g_window, mouse_callback);
 

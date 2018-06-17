@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-18.
 //
 
-#ifndef WEEABOO_MAP_H
-#define WEEABOO_MAP_H
+#ifndef DSPROJECT_MAP_H
+#define DSPROJECT_MAP_H
 
 #include "mesh.h"
 #include "map_generator.h"
@@ -29,4 +29,4 @@ private:
     void setup_mesh();
 };
 
-#endif //WEEABOO_MAP_H
+#endif //DSPROJECT_MAP_H

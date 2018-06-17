@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-18.
 //
 
-#ifndef WEEABOO_MODEL_ANIMATION_H
-#define WEEABOO_MODEL_ANIMATION_H
+#ifndef DSPROJECT_MODEL_ANIMATION_H
+#define DSPROJECT_MODEL_ANIMATION_H
 
 #include "animation_manager.h"
 
@@ -22,5 +22,5 @@ private:
     std::shared_ptr<AnimationState> animation_state;
 };
 
-#endif //WEEABOO_MODEL_ANIMATION_H
+#endif //DSPROJECT_MODEL_ANIMATION_H
 

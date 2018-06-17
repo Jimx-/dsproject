@@ -1,5 +1,5 @@
-#ifndef WEEABOO_PARTICLE_SYSTEM_H
-#define WEEABOO_PARTICLE_SYSTEM_H
+#ifndef DSPROJECT_PARTICLE_SYSTEM_H
+#define DSPROJECT_PARTICLE_SYSTEM_H
 
 #include "singleton.h"
 #include "particle.h"

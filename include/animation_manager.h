@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-17.
 //
 
-#ifndef WEEABOO_ANIMATION_MANAGER_H
-#define WEEABOO_ANIMATION_MANAGER_H
+#ifndef DSPROJECT_ANIMATION_MANAGER_H
+#define DSPROJECT_ANIMATION_MANAGER_H
 
 #include "singleton.h"
 #include "animation.h"
@@ -43,5 +43,5 @@ private:
 
 #define ANIMATION_MANAGER AnimationManager::get_singleton()
 
-#endif //WEEABOO_ANIMATION_MANAGER_H
+#endif //DSPROJECT_ANIMATION_MANAGER_H
 

@@ -1,5 +1,5 @@
-#ifndef WEEABOO_MOTION_STATE_H
-#define WEEABOO_MOTION_STATE_H
+#ifndef DSPROJECT_MOTION_STATE_H
+#define DSPROJECT_MOTION_STATE_H
 
 #include "camera.h"
 

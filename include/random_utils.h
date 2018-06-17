@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-19.
 //
 
-#ifndef WEEABOO_RANDOM_UTILS_H_H
-#define WEEABOO_RANDOM_UTILS_H_H
+#ifndef DSPROJECT_RANDOM_UTILS_H_H
+#define DSPROJECT_RANDOM_UTILS_H_H
 
 #include <random>
 
@@ -18,4 +18,4 @@ public:
     static bool random_bool(double probability = 0.5);
 };
 
-#endif //WEEABOO_RANDOM_UTILS_H_H
+#endif //DSPROJECT_RANDOM_UTILS_H_H

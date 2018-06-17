@@ -1,5 +1,5 @@
-#ifndef WEEABOO_CHARACTERS_H
-#define WEEABOO_CHARACTERS_H
+#ifndef DSPROJECT_CHARACTERS_H
+#define DSPROJECT_CHARACTERS_H
 #include <queue>
 
 #include "renderable.h"

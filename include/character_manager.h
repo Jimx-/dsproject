@@ -1,5 +1,5 @@
-#ifndef WEEABOO_CHARACTER_MANAGER_H
-#define WEEABOO_CHARACTER_MANAGER_H
+#ifndef DSPROJECT_CHARACTER_MANAGER_H
+#define DSPROJECT_CHARACTER_MANAGER_H
 
 #include "characters.h"
 #include "singleton.h"

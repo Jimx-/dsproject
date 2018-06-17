@@ -1,5 +1,5 @@
-#ifndef WEEABOO_CONTROLLERS_H
-#define WEEABOO_CONTROLLERS_H
+#ifndef DSPROJECT_CONTROLLERS_H
+#define DSPROJECT_CONTROLLERS_H
 
 #include "renderer.h"
 #include "map.h"

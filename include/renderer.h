@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-16.
 //
 
-#ifndef WEEABOO_RENDERER_H
-#define WEEABOO_RENDERER_H
+#ifndef DSPROJECT_RENDERER_H
+#define DSPROJECT_RENDERER_H
 
 #include "shader_program.h"
 #include "intern_string.h"
@@ -163,5 +163,5 @@ private:
 
 #define RENDERER Renderer::get_singleton()
 
-#endif //WEEABOO_RENDERER_H
+#endif //DSPROJECT_RENDERER_H
 

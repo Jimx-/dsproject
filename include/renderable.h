@@ -1,5 +1,5 @@
-#ifndef WEEABOO_RENDERABLE_H
-#define WEEABOO_RENDERABLE_H
+#ifndef DSPROJECT_RENDERABLE_H
+#define DSPROJECT_RENDERABLE_H
 
 #include "renderer.h"
 

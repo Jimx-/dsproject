@@ -1,5 +1,5 @@
-#ifndef WEEABOO_PARTICLE_H
-#define WEEABOO_PARTICLE_H
+#ifndef DSPROJECT_PARTICLE_H
+#define DSPROJECT_PARTICLE_H
 
 #include "renderable.h"
 #include "material.h"

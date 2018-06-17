@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-16.
 //
 
-#ifndef WEEABOO_STRINGS_H
-#define WEEABOO_STRINGS_H
+#ifndef DSPROJECT_STRINGS_H
+#define DSPROJECT_STRINGS_H
 
 const InternString Renderer::LIGHTING_SHADER = "lighting";
 const InternString Renderer::BONE_ANIM_SHADER = "bone_animation";
@@ -36,5 +36,5 @@ const InternString ShaderProgram::GBUFFER_POSITION = "gPosition";
 const InternString ShaderProgram::GBUFFER_NORMAL = "gNormal";
 const InternString ShaderProgram::GBUFFER_ALBEDO_SPEC = "gAlbedoSpec";
 
-#endif //WEEABOO_STRINGS_H
+#endif //DSPROJECT_STRINGS_H
 

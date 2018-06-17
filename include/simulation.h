@@ -1,5 +1,5 @@
-#ifndef _WEEABOO_SIMULATION_H_
-#define _WEEABOO_SIMULATION_H_
+#ifndef _DSPROJECT_SIMULATION_H_
+#define _DSPROJECT_SIMULATION_H_
 
 #include "singleton.h"
 #include "motion_state.h"

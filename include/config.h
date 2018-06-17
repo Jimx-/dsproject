@@ -2,8 +2,8 @@
 // Created by jimx on 16-12-17.
 //
 
-#ifndef WEEABOO_CONFIG_H
-#define WEEABOO_CONFIG_H
+#ifndef DSPROJECT_CONFIG_H
+#define DSPROJECT_CONFIG_H
 
 #include "json/json.h"
 #include "string_utils.h"
@@ -37,4 +37,4 @@ extern bool g_fullscreen;
 extern int g_MSAA;
 extern std::string g_font;
 
-#endif //WEEABOO_CONFIG_H
+#endif //DSPROJECT_CONFIG_H

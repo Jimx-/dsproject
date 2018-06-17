@@ -1,5 +1,5 @@
-#ifndef WEEABOO_TEXT_OVERLAY_H
-#define WEEABOO_TEXT_OVERLAY_H
+#ifndef DSPROJECT_TEXT_OVERLAY_H
+#define DSPROJECT_TEXT_OVERLAY_H
 
 #include "renderable.h"
 

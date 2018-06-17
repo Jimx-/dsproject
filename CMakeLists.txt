@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
-project(weeaboo)
+project(dsproject)
 
-SET(TOPDIR ${weeaboo_SOURCE_DIR})
+SET(TOPDIR ${dsproject_SOURCE_DIR})
 SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 #----------------------
@@ -60,7 +60,7 @@ SET(EXT_SRCLIST
         ${TOPDIR}/ext/glad/src/glad.c
         ${TOPDIR}/ext/jsoncpp/dist/jsoncpp.cpp)
 
-SET(WEEABOO_SRCLIST
+SET(DSPROJECT_SRCLIST
         src/log.cpp
         src/log_manager.cpp
         src/main.cpp
@@ -91,6 +91,6 @@ SET(WEEABOO_SRCLIST
 SET(LIBRARIES
     assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} BulletDynamics BulletCollision LinearMath ${FREETYPE_LIBRARIES})
 
-ADD_EXECUTABLE(weeaboo ${WEEABOO_SRCLIST} ${EXT_SRCLIST})
-TARGET_LINK_LIBRARIES(weeaboo ${LIBRARIES})
+ADD_EXECUTABLE(dsproject ${DSPROJECT_SRCLIST} ${EXT_SRCLIST})
+TARGET_LINK_LIBRARIES(dsproject ${LIBRARIES})
 
